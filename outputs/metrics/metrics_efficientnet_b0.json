@@ -1,0 +1,275 @@
+{
+  "arch": "efficientnet_b0",
+  "n_validation": 460,
+  "default_threshold": {
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 204,
+      "fp": 26,
+      "fn": 26,
+      "tp": 204
+    },
+    "classification_report": {
+      "01-whole": {
+        "precision": 0.8869565217391304,
+        "recall": 0.8869565217391304,
+        "f1-score": 0.8869565217391304,
+        "support": 230.0
+      },
+      "00-damage": {
+        "precision": 0.8869565217391304,
+        "recall": 0.8869565217391304,
+        "f1-score": 0.8869565217391304,
+        "support": 230.0
+      },
+      "accuracy": 0.8869565217391304,
+      "macro avg": {
+        "precision": 0.8869565217391304,
+        "recall": 0.8869565217391304,
+        "f1-score": 0.8869565217391304,
+        "support": 460.0
+      },
+      "weighted avg": {
+        "precision": 0.8869565217391304,
+        "recall": 0.8869565217391304,
+        "f1-score": 0.8869565217391304,
+        "support": 460.0
+      }
+    },
+    "roc_auc": 0.9620415879017014,
+    "accuracy": 0.8869565217391304
+  },
+  "threshold_table": [
+    {
+      "threshold": 0.05,
+      "recall_damage": 0.9957,
+      "precision_damage": 0.658,
+      "f1_damage": 0.7924,
+      "fn": 1,
+      "fp": 119
+    },
+    {
+      "threshold": 0.1,
+      "recall_damage": 0.987,
+      "precision_damage": 0.7299,
+      "f1_damage": 0.8392,
+      "fn": 3,
+      "fp": 84
+    },
+    {
+      "threshold": 0.15,
+      "recall_damage": 0.9783,
+      "precision_damage": 0.7627,
+      "f1_damage": 0.8571,
+      "fn": 5,
+      "fp": 70
+    },
+    {
+      "threshold": 0.2,
+      "recall_damage": 0.9652,
+      "precision_damage": 0.8014,
+      "f1_damage": 0.8757,
+      "fn": 8,
+      "fp": 55
+    },
+    {
+      "threshold": 0.25,
+      "recall_damage": 0.9565,
+      "precision_damage": 0.8209,
+      "f1_damage": 0.8835,
+      "fn": 10,
+      "fp": 48
+    },
+    {
+      "threshold": 0.3,
+      "recall_damage": 0.9435,
+      "precision_damage": 0.8444,
+      "f1_damage": 0.8912,
+      "fn": 13,
+      "fp": 40
+    },
+    {
+      "threshold": 0.35,
+      "recall_damage": 0.9391,
+      "precision_damage": 0.8538,
+      "f1_damage": 0.8944,
+      "fn": 14,
+      "fp": 37
+    },
+    {
+      "threshold": 0.4,
+      "recall_damage": 0.913,
+      "precision_damage": 0.8642,
+      "f1_damage": 0.8879,
+      "fn": 20,
+      "fp": 33
+    },
+    {
+      "threshold": 0.45,
+      "recall_damage": 0.913,
+      "precision_damage": 0.8787,
+      "f1_damage": 0.8955,
+      "fn": 20,
+      "fp": 29
+    },
+    {
+      "threshold": 0.5,
+      "recall_damage": 0.887,
+      "precision_damage": 0.887,
+      "f1_damage": 0.887,
+      "fn": 26,
+      "fp": 26
+    },
+    {
+      "threshold": 0.55,
+      "recall_damage": 0.8739,
+      "precision_damage": 0.9013,
+      "f1_damage": 0.8874,
+      "fn": 29,
+      "fp": 22
+    },
+    {
+      "threshold": 0.6,
+      "recall_damage": 0.8652,
+      "precision_damage": 0.9128,
+      "f1_damage": 0.8884,
+      "fn": 31,
+      "fp": 19
+    },
+    {
+      "threshold": 0.65,
+      "recall_damage": 0.8565,
+      "precision_damage": 0.9336,
+      "f1_damage": 0.8934,
+      "fn": 33,
+      "fp": 14
+    },
+    {
+      "threshold": 0.7,
+      "recall_damage": 0.8261,
+      "precision_damage": 0.9406,
+      "f1_damage": 0.8796,
+      "fn": 40,
+      "fp": 12
+    },
+    {
+      "threshold": 0.75,
+      "recall_damage": 0.7913,
+      "precision_damage": 0.9529,
+      "f1_damage": 0.8646,
+      "fn": 48,
+      "fp": 9
+    },
+    {
+      "threshold": 0.8,
+      "recall_damage": 0.7522,
+      "precision_damage": 0.9558,
+      "f1_damage": 0.8418,
+      "fn": 57,
+      "fp": 8
+    },
+    {
+      "threshold": 0.85,
+      "recall_damage": 0.7043,
+      "precision_damage": 0.9643,
+      "f1_damage": 0.8141,
+      "fn": 68,
+      "fp": 6
+    },
+    {
+      "threshold": 0.9,
+      "recall_damage": 0.6043,
+      "precision_damage": 0.9789,
+      "f1_damage": 0.7473,
+      "fn": 91,
+      "fp": 3
+    },
+    {
+      "threshold": 0.95,
+      "recall_damage": 0.5043,
+      "precision_damage": 0.9831,
+      "f1_damage": 0.6667,
+      "fn": 114,
+      "fp": 2
+    }
+  ],
+  "recall_priority_threshold": {
+    "threshold": 0.1,
+    "recall_damage": 0.987,
+    "precision_damage": 0.7299,
+    "f1_damage": 0.8392,
+    "fn": 3,
+    "fp": 84
+  },
+  "recall_priority_metrics": {
+    "threshold": 0.1,
+    "confusion_matrix": {
+      "tn": 146,
+      "fp": 84,
+      "fn": 3,
+      "tp": 227
+    },
+    "classification_report": {
+      "01-whole": {
+        "precision": 0.9798657718120806,
+        "recall": 0.6347826086956522,
+        "f1-score": 0.7704485488126649,
+        "support": 230.0
+      },
+      "00-damage": {
+        "precision": 0.729903536977492,
+        "recall": 0.9869565217391304,
+        "f1-score": 0.8391866913123844,
+        "support": 230.0
+      },
+      "accuracy": 0.8108695652173913,
+      "macro avg": {
+        "precision": 0.8548846543947863,
+        "recall": 0.8108695652173913,
+        "f1-score": 0.8048176200625247,
+        "support": 460.0
+      },
+      "weighted avg": {
+        "precision": 0.8548846543947862,
+        "recall": 0.8108695652173913,
+        "f1-score": 0.8048176200625246,
+        "support": 460.0
+      }
+    },
+    "roc_auc": 0.9620415879017014,
+    "accuracy": 0.8108695652173913
+  },
+  "false_negative_count": 25,
+  "false_negative_paths": [
+    "data\\raw\\validation\\00-damage\\0017.JPEG",
+    "data\\raw\\validation\\00-damage\\0018.JPEG",
+    "data\\raw\\validation\\00-damage\\0027.jpeg",
+    "data\\raw\\validation\\00-damage\\0034.JPEG",
+    "data\\raw\\validation\\00-damage\\0037.JPEG",
+    "data\\raw\\validation\\00-damage\\0048.JPEG",
+    "data\\raw\\validation\\00-damage\\0060.JPEG",
+    "data\\raw\\validation\\00-damage\\0065.JPEG",
+    "data\\raw\\validation\\00-damage\\0070.JPEG",
+    "data\\raw\\validation\\00-damage\\0071.JPEG",
+    "data\\raw\\validation\\00-damage\\0078.JPEG",
+    "data\\raw\\validation\\00-damage\\0085.JPEG",
+    "data\\raw\\validation\\00-damage\\0093.JPEG",
+    "data\\raw\\validation\\00-damage\\0096.JPEG",
+    "data\\raw\\validation\\00-damage\\0109.JPEG",
+    "data\\raw\\validation\\00-damage\\0116.JPEG",
+    "data\\raw\\validation\\00-damage\\0136.JPEG",
+    "data\\raw\\validation\\00-damage\\0137.JPEG",
+    "data\\raw\\validation\\00-damage\\0166.JPEG",
+    "data\\raw\\validation\\00-damage\\0169.JPEG",
+    "data\\raw\\validation\\00-damage\\0178.JPEG",
+    "data\\raw\\validation\\00-damage\\0183.JPEG",
+    "data\\raw\\validation\\00-damage\\0207.JPEG",
+    "data\\raw\\validation\\00-damage\\0227.JPEG",
+    "data\\raw\\validation\\00-damage\\0229.JPEG"
+  ],
+  "figures": {
+    "confusion_matrix": "outputs\\figures\\confusion_matrix_efficientnet_b0.png",
+    "roc_curve": "outputs\\figures\\roc_curve_efficientnet_b0.png",
+    "threshold_tradeoff": "outputs\\figures\\threshold_tradeoff_efficientnet_b0.png"
+  }
+}

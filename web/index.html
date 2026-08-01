@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClaimSight — Vehicle Damage Triage System</title>
+<meta name="description" content="ClaimSight is a binary vehicle-damage classifier for auto-insurance claim triage — deterministic OpenCV pipeline, ResNet50 transfer learning, Grad-CAM explainability, and a served FastAPI endpoint. 94.3% validation accuracy, ROC-AUC 0.986.">
+<link rel="icon" href="asset/img/logo_renands_nav.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --void:#10141A;
+  --panel:#171D26;
+  --panel-raised:#1E2530;
+  --line:#2A3140;
+  --line-soft:#1D2430;
+  --ink:#EAEEF4;
+  --ink-muted:#8993A4;
+  --ink-faint:#5A6474;
+  --amber:#FFA23C;
+  --amber-soft:rgba(255,162,60,0.12);
+  --amber-line:rgba(255,162,60,0.35);
+  --teal:#3FD6B0;
+  --teal-soft:rgba(63,214,176,0.12);
+  --teal-line:rgba(63,214,176,0.35);
+  --radius:7px;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --maxw:1180px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto;}*{animation-duration:0.001ms !important;transition-duration:0.001ms !important;}}
+body{
+  margin:0;background:var(--void);color:var(--ink);
+  font-family:var(--font-body);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;}
+img,svg{display:block;max-width:100%;}
+h1,h2,h3,h4{font-family:var(--font-display);margin:0;letter-spacing:-0.01em;}
+p{margin:0;}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px;}
+::selection{background:var(--amber);color:#1A1200;}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px;}
+
+/* background grid texture */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--line-soft) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 90%);
+  opacity:0.5;
+}
+
+/* ============ EYEBROW / LABELS ============ */
+.eyebrow{
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--amber);display:flex;align-items:center;gap:10px;margin-bottom:14px;
+}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--amber);display:inline-block;}
+.status-pill{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:0.06em;
+  border:1px solid var(--line);border-radius:100px;padding:5px 12px;color:var(--ink-muted);
+  display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
+.dot.pending{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
+
+/* ============ SIGNATURE: RETICLE FRAME ============ */
+.frame{position:relative;}
+.frame::before,.frame::after,.frame .fc-tr,.frame .fc-br{content:"";position:absolute;width:16px;height:16px;pointer-events:none;}
+.frame::before{top:-1px;left:-1px;border-top:2px solid var(--amber);border-left:2px solid var(--amber);}
+.frame::after{bottom:-1px;left:-1px;border-bottom:2px solid var(--amber);border-left:2px solid var(--amber);}
+.frame .fc-tr{top:-1px;right:-1px;border-top:2px solid var(--amber);border-right:2px solid var(--amber);}
+.frame .fc-br{bottom:-1px;right:-1px;border-bottom:2px solid var(--amber);border-right:2px solid var(--amber);}
+
+/* ============ NAV ============ */
+header.nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(16,20,26,0.86);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px;}
+.brand{display:flex;align-items:center;gap:11px;}
+.brand img{height:28px;width:auto;display:block;}
+.brand-text{display:flex;align-items:baseline;gap:9px;}
+.brand-mark{font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:-0.02em;}
+.brand-mark span{color:var(--amber);}
+.brand-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);letter-spacing:0.06em;}
+nav.links{display:flex;gap:24px;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted);}
+nav.links a{text-decoration:none;padding:4px 0;border-bottom:1px solid transparent;transition:color .15s,border-color .15s;}
+nav.links a:hover,nav.links a.active{color:var(--ink);border-color:var(--amber);}
+.nav-cta{display:flex;gap:10px;}
+.btn-ghost{
+  font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);text-decoration:none;
+  border:1px solid var(--line);border-radius:6px;padding:7px 13px;transition:border-color .15s,color .15s;
+}
+.btn-ghost:hover{border-color:var(--amber-line);color:var(--ink);}
+.nav-toggle{display:none;background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);width:38px;height:38px;font-size:16px;}
+
+/* ============ HERO ============ */
+.hero{position:relative;z-index:1;padding:76px 0 60px;}
+.hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;}
+.hero h1{font-size:clamp(32px,4.2vw,52px);line-height:1.08;font-weight:700;}
+.hero h1 em{font-style:normal;color:var(--amber);}
+.hero-sub{font-size:16.5px;color:var(--ink-muted);max-width:52ch;margin-top:20px;}
+.hero-ctas{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap;}
+.btn-primary{
+  font-family:var(--font-mono);font-size:13px;background:var(--amber);color:#1A1200;
+  padding:11px 20px;border-radius:6px;text-decoration:none;font-weight:600;letter-spacing:0.02em;
+  transition:transform .15s,box-shadow .15s;border:none;cursor:pointer;
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,162,60,0.25);}
+.build-status{
+  margin-top:26px;display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--font-mono);font-size:11.5px;color:var(--ink-faint);
+  border-left:2px solid var(--teal-line);padding-left:12px;
+}
+.chip-strip{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap;}
+.chip{
+  font-family:var(--font-mono);font-size:11.5px;border:1px solid var(--line);border-radius:6px;
+  padding:8px 12px;background:var(--panel);display:flex;align-items:center;gap:8px;color:var(--ink-muted);
+}
+.chip b{color:var(--ink);font-weight:600;}
+.chip .swatch{width:8px;height:8px;border-radius:2px;}
+
+/* hero visual */
+.hero-visual{position:relative;padding:20px;background:var(--panel);border-radius:var(--radius);}
+.hero-visual .gradcam-wrap{display:flex;justify-content:center;padding:8px;}
+.hero-visual img.gradcam-hero{width:260px;height:260px;object-fit:cover;border-radius:4px;image-rendering:-webkit-optimize-contrast;}
+.reticle-label{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);}
+.hero-readout{display:flex;justify-content:space-between;gap:14px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line-soft);}
+.hero-readout div{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);}
+.hero-readout b{display:block;color:var(--teal);font-size:15px;font-family:var(--font-display);margin-top:2px;}
+.caption-note{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin-top:14px;text-align:center;}
+
+/* ============ SECTION SHELL ============ */
+section{position:relative;z-index:1;padding:88px 0;border-top:1px solid var(--line-soft);}
+.section-head{max-width:640px;margin-bottom:44px;}
+.section-head h2{font-size:clamp(24px,2.6vw,34px);font-weight:600;}
+.section-head p{color:var(--ink-muted);margin-top:14px;font-size:15.5px;}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease;}
+.reveal.in{opacity:1;transform:translateY(0);}
+
+/* ============ CARD BASICS ============ */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.stat-num{font-family:var(--font-display);font-size:34px;font-weight:700;}
+.stat-label{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-muted);letter-spacing:0.04em;margin-top:6px;text-transform:uppercase;}
+.stat-foot{font-size:13px;color:var(--ink-faint);margin-top:10px;}
+
+/* ============ PIPELINE FLOW ============ */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;position:relative;}
+.flow-step{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 16px;position:relative;}
+.flow-step .num{font-family:var(--font-mono);color:var(--amber);font-size:12px;}
+.flow-step h4{font-size:14.5px;margin-top:10px;font-weight:600;}
+.flow-step p{font-size:12.5px;color:var(--ink-muted);margin-top:8px;line-height:1.5;}
+@media(min-width:900px){
+  .flow-step:not(:last-child)::after{
+    content:"→";position:absolute;right:-19px;top:50%;transform:translateY(-50%);
+    color:var(--ink-faint);font-family:var(--font-mono);z-index:2;
+  }
+}
+.skew-callout{
+  margin-top:26px;border:1px dashed var(--teal-line);background:var(--teal-soft);
+  border-radius:var(--radius);padding:18px 20px;display:flex;gap:16px;align-items:flex-start;
+}
+.skew-callout .tag{font-family:var(--font-mono);font-size:11px;color:var(--teal);border:1px solid var(--teal-line);border-radius:5px;padding:3px 8px;white-space:nowrap;}
+.skew-callout p{font-size:13.5px;color:var(--ink-muted);}
+.skew-callout code{font-family:var(--font-mono);color:var(--ink);background:rgba(255,255,255,0.05);padding:1px 5px;border-radius:3px;font-size:12.5px;}
+
+/* ============ DATASET ============ */
+.dataset-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
+.chart-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;}
+.chart-box h4{font-size:13px;font-family:var(--font-mono);color:var(--ink-muted);font-weight:500;margin-bottom:14px;}
+.mini-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
+.mini-table th,.mini-table td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-soft);}
+.mini-table th{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:500;}
+.mini-table td.num{font-family:var(--font-mono);color:var(--teal);}
+.source-note{font-size:12px;color:var(--ink-faint);margin-top:14px;}
+.result-img{width:100%;border-radius:6px;border:1px solid var(--line-soft);margin-top:16px;background:#fff;}
+
+/* ============ MODELING ============ */
+.model-card h3{font-size:17px;font-weight:600;}
+.model-card .tag-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.tag{font-family:var(--font-mono);font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:3px 8px;color:var(--ink-muted);}
+.tag.win{color:var(--teal);border-color:var(--teal-line);background:var(--teal-soft);}
+.model-card p{font-size:13.5px;color:var(--ink-muted);margin-top:12px;}
+.model-card .mini-metric{font-family:var(--font-mono);font-size:12px;color:var(--ink);margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft);}
+.model-card .mini-metric b{color:var(--amber);}
+.phase-line{margin-top:34px;position:relative;padding-left:28px;border-left:2px solid var(--line);}
+.phase-item{position:relative;padding-bottom:26px;}
+.phase-item:last-child{padding-bottom:0;}
+.phase-item::before{content:"";position:absolute;left:-35px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--void);border:2px solid var(--amber);}
+.phase-item h4{font-size:14.5px;font-weight:600;}
+.phase-item p{font-size:13.5px;color:var(--ink-muted);margin-top:6px;}
+.phase-item .mono-tag{font-family:var(--font-mono);font-size:11px;color:var(--amber);}
+
+/* ============ RESULTS ============ */
+.results-banner{
+  border:1px solid var(--teal-line);background:var(--teal-soft);border-radius:var(--radius);
+  padding:16px 20px;display:flex;gap:14px;align-items:flex-start;margin-bottom:36px;
+}
+.results-banner p{font-size:13.5px;color:var(--ink-muted);}
+.results-banner strong{color:var(--ink);}
+.results-layout{display:grid;grid-template-columns:0.85fr 1.15fr;gap:36px;}
+.cm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.cm-cell{background:var(--panel);padding:22px 14px;text-align:center;}
+.cm-cell.flag{background:rgba(255,162,60,0.06);border:1px dashed var(--amber-line);}
+.cm-cell .cm-val{font-family:var(--font-display);font-size:28px;color:var(--ink);}
+.cm-cell.flag .cm-val{color:var(--amber);}
+.cm-cell .cm-lab{font-family:var(--font-mono);font-size:10px;color:var(--ink-faint);letter-spacing:0.05em;margin-top:6px;text-transform:uppercase;}
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.metric-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px;background:var(--panel);}
+.metric-card.priority{border-color:var(--amber-line);background:var(--amber-soft);}
+.metric-card .m-val{font-family:var(--font-display);font-size:26px;color:var(--ink);}
+.metric-card.priority .m-val{color:var(--amber);}
+.metric-card .m-lab{font-family:var(--font-mono);font-size:11px;color:var(--ink-muted);margin-top:4px;}
+.metric-card .m-note{font-size:11px;color:var(--ink-faint);margin-top:6px;}
+.threshold-callout{
+  margin-top:24px;border:1px dashed var(--amber-line);background:var(--amber-soft);
+  border-radius:var(--radius);padding:18px 20px;
+}
+.threshold-callout p{font-size:13.5px;color:var(--ink-muted);}
+.threshold-callout strong{color:var(--ink);}
+
+/* ============ EXPLAINABILITY ============ */
+.explain-layout{display:grid;grid-template-columns:0.9fr 1.1fr;gap:44px;align-items:start;}
+.compare-table{width:100%;border-collapse:collapse;font-size:13px;}
+.compare-table th,.compare-table td{padding:11px 12px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:top;}
+.compare-table th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);font-weight:500;}
+.compare-table td.gc{color:var(--amber);}
+.compare-table td.seg{color:var(--teal);}
+.gradcam-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px;}
+.gradcam-grid figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.gradcam-grid img{width:100%;aspect-ratio:1;object-fit:cover;}
+.gradcam-grid figcaption{font-family:var(--font-mono);font-size:10px;padding:6px 8px;color:var(--ink-muted);text-align:center;}
+.gradcam-grid figcaption b{color:var(--ink);}
+.shortcut-note{margin-top:20px;font-size:13.5px;color:var(--ink-muted);}
+.shortcut-note strong{color:var(--ink);}
+
+/* ============ API ============ */
+.api-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.api-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel-raised);}
+.method{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;}
+.method.get{background:var(--teal-soft);color:var(--teal);}
+.method.post{background:var(--amber-soft);color:var(--amber);}
+.api-path{font-family:var(--font-mono);font-size:13px;color:var(--ink);}
+pre{margin:0;padding:18px;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-muted);overflow-x:auto;line-height:1.6;}
+pre .k{color:var(--teal);}
+pre .s{color:var(--amber);}
+.api-notes{list-style:none;margin:16px 0 0;padding:0;font-size:13px;color:var(--ink-muted);}
+.api-notes li{padding-left:18px;position:relative;margin-top:8px;}
+.api-notes li::before{content:"—";position:absolute;left:0;color:var(--ink-faint);}
+
+/* ============ BUSINESS / PRICING ============ */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.price-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px 22px;display:flex;flex-direction:column;}
+.price-card.highlight{border-color:var(--amber-line);background:linear-gradient(180deg,var(--amber-soft),var(--panel) 60%);position:relative;}
+.price-card .plan-tag{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);text-transform:uppercase;letter-spacing:0.08em;position:absolute;top:-11px;left:22px;background:var(--void);padding:0 8px;}
+.price-card h3{font-size:16px;font-weight:600;}
+.price-card .price{font-family:var(--font-display);font-size:30px;font-weight:700;margin-top:10px;}
+.price-card .price span{font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);font-weight:400;}
+.price-card ul{list-style:none;margin:18px 0 0;padding:0;flex:1;}
+.price-card li{font-size:13px;color:var(--ink-muted);padding:7px 0;border-bottom:1px solid var(--line-soft);}
+.price-card li::before{content:"✓ ";color:var(--teal);font-family:var(--font-mono);}
+.price-card .btn-ghost,.price-card .btn-primary{margin-top:20px;text-align:center;}
+.business-note{margin-top:28px;font-size:13px;color:var(--ink-faint);border-left:2px solid var(--line);padding-left:14px;}
+
+/* ============ SKILL MAP ============ */
+.skill-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.skill-table th,.skill-table td{padding:13px 14px;border-bottom:1px solid var(--line-soft);text-align:left;}
+.skill-table th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-faint);font-weight:500;}
+.skill-table td:first-child{color:var(--ink);font-weight:500;}
+.skill-table code{font-family:var(--font-mono);font-size:12.5px;color:var(--teal);background:rgba(63,214,176,0.08);padding:2px 6px;border-radius:4px;}
+
+/* ============ LIMITATIONS ============ */
+.limit-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;}
+.limit-list,.road-list{list-style:none;margin:0;padding:0;}
+.limit-list li,.road-list li{padding:14px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--ink-muted);display:flex;gap:12px;}
+.limit-list li::before{content:"!";font-family:var(--font-mono);color:var(--amber);border:1px solid var(--amber-line);border-radius:50%;width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.road-list li::before{content:"→";font-family:var(--font-mono);color:var(--teal);flex:none;}
+
+/* ============ FOOTER ============ */
+footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
+.disclaimer{
+  border:1px solid var(--amber-line);border-radius:var(--radius);padding:18px 22px;
+  display:flex;gap:16px;align-items:flex-start;margin-bottom:40px;background:var(--amber-soft);
+}
+.disclaimer p{font-size:13.5px;color:var(--ink-muted);}
+.disclaimer strong{color:var(--ink);}
+.footer-grid{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;}
+.footer-brand{display:flex;align-items:center;gap:12px;}
+.footer-brand img{height:26px;}
+.footer-links{display:flex;gap:22px;font-family:var(--font-mono);font-size:12.5px;}
+.footer-links a{text-decoration:none;color:var(--ink-muted);border-bottom:1px solid transparent;}
+.footer-links a:hover{color:var(--ink);border-color:var(--amber);}
+.footer-credit{font-size:12px;color:var(--ink-faint);}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:900px){
+  nav.links,.nav-cta{display:none;}
+  .nav-toggle{display:block;}
+  .hero-grid,.dataset-layout,.results-layout,.explain-layout,.limit-layout,.grid-3,.grid-2,.pricing-grid{grid-template-columns:1fr;}
+  .flow{grid-template-columns:1fr;}
+  .flow-step:not(:last-child)::after{display:none;}
+  .gradcam-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <img src="asset/img/logo_renands_nav.png" alt="renan DS logo">
+      <div class="brand-text">
+        <span class="brand-mark">Claim<span>Sight</span></span>
+        <span class="brand-sub">/ DAMAGE TRIAGE</span>
+      </div>
+    </div>
+    <nav class="links">
+      <a href="#problem">Problem</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#modeling">Modeling</a>
+      <a href="#results">Results</a>
+      <a href="#explainability">Explainability</a>
+      <a href="#api">API</a>
+      <a href="#business">Business</a>
+      <a href="#limitations">Limitations</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn-ghost" href="https://github.com/" target="_blank" rel="noopener">GitHub ↗</a>
+      <a class="btn-ghost" href="https://huggingface.co/" target="_blank" rel="noopener">Model Card ↗</a>
+    </div>
+    <button class="nav-toggle" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero" style="border-top:none;padding-top:64px;">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">COMPUTER VISION · INSURANCE CLAIMS TRIAGE</div>
+      <h1>Damage, or whole.<br>Flagged for <em>human review</em> in milliseconds.</h1>
+      <p class="hero-sub">ClaimSight is a binary vehicle-damage classifier for auto-insurance claim triage — from a deterministic ingestion pipeline through Grad-CAM explainability to a served FastAPI endpoint. It's a decision-support tool, not an autonomous adjuster: every flagged claim still routes to a human reviewer.</p>
+      <div class="hero-ctas">
+        <a href="#results" class="btn-primary">See real results ↓</a>
+        <a href="#api" class="btn-ghost">Try the live demo</a>
+      </div>
+      <div class="build-status">
+        <span class="dot"></span>
+        BUILD STATUS: training complete · ResNet50 selected (94.3% val. accuracy · ROC-AUC 0.986) · API live
+      </div>
+      <div class="chip-strip">
+        <div class="chip"><span class="swatch" style="background:var(--amber)"></span>class: <b>00-damage</b> · confidence: 0.89</div>
+        <div class="chip"><span class="swatch" style="background:var(--teal)"></span>class: <b>01-whole</b> · confidence: 1.00</div>
+      </div>
+    </div>
+    <div class="hero-visual frame">
+      <span class="fc-tr"></span><span class="fc-br"></span>
+      <div class="reticle-label">GRAD-CAM · REAL VALIDATION EXAMPLE</div>
+      <div class="gradcam-wrap">
+        <img class="gradcam-hero" src="asset/img/results/hero_gradcam.png" alt="Grad-CAM heatmap overlay on a damaged vehicle door, correctly classified as 00-damage">
+      </div>
+      <div class="hero-readout">
+        <div>PREDICTION<b>00-damage</b></div>
+        <div>CONFIDENCE<b>1.00</b></div>
+        <div>OUTCOME<b>True Positive</b></div>
+      </div>
+      <p class="caption-note">Real overlay, unedited — coarse activation map, not a pixel-level segmentation mask (see §06).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 PROBLEM ============ -->
+<section id="problem">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">01 · THE PROBLEM</div>
+      <h2>Manual photo review doesn't scale with claim volume</h2>
+      <p>Every submitted claim arrives with photos that need a first visual pass before an adjuster estimates repair cost. That pass is slow, inconsistent across reviewers, and adds latency before the customer hears anything back.</p>
+    </div>
+    <div class="grid-3 reveal">
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;">Triage, not adjudication</h3>
+        <p style="font-size:13.5px;color:var(--ink-muted);margin-top:10px;">A lightweight binary pass routes obviously-intact vehicles away from the review queue and flags damaged ones with a visual cue — it never approves or denies a claim.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;">Asymmetric error cost</h3>
+        <p style="font-size:13.5px;color:var(--ink-muted);margin-top:10px;">A damaged car missed by the classifier (false negative) is far more costly than a false alarm. Recall on the <em style="color:var(--amber);font-style:normal;">damage</em> class is prioritized over raw accuracy.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;">Threshold as a business lever</h3>
+        <p style="font-size:13.5px;color:var(--ink-muted);margin-top:10px;">The decision threshold is tuned against that cost asymmetry, not chosen purely to maximize a statistical score — and the trade-off is measured and documented in §05, not hidden.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 PIPELINE ============ -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">02 · DATA ENGINEERING</div>
+      <h2>One <code style="font-family:var(--font-mono);color:var(--amber);font-size:0.85em;">preprocess()</code> function. Zero train/serve skew.</h2>
+      <p>The same deterministic transform runs in training, evaluation, and the live API — so the tensor a model was trained on and the tensor it sees in production are built by identical code, not two implementations that drift apart.</p>
+    </div>
+    <div class="flow reveal">
+      <div class="flow-step"><div class="num">01</div><h4>Ingestion</h4><p>Kaggle dataset pull (anujms/car-damage-detection) into a fixed folder layout — idempotent, re-runnable without duplication.</p></div>
+      <div class="flow-step"><div class="num">02</div><h4>Deterministic preprocessing</h4><p>BGR→RGB, aspect-preserving letterbox resize to 224×224, bilateral filter, CLAHE on the L-channel (LAB).</p></div>
+      <div class="flow-step"><div class="num">03</div><h4>Augmentation</h4><p>Albumentations transforms, applied strictly after the shared step, and only on the training split.</p></div>
+      <div class="flow-step"><div class="num">04</div><h4>Normalization</h4><p>ImageNet mean/std, fixed seeds, pinned <code style="font-family:var(--font-mono);font-size:0.85em;">requirements.txt</code> for reproducibility.</p></div>
+      <div class="flow-step"><div class="num">05</div><h4>Serving</h4><p>The identical function is imported into the FastAPI handler — same bytes in, same tensor out.</p></div>
+    </div>
+    <div class="skew-callout reveal">
+      <span class="tag">ZERO-SKEW</span>
+      <p><code>src/preprocessing.py</code> is imported by both <code>src/dataset.py</code> (training/evaluation) and <code>app/main.py</code> (serving). There is exactly one code path that turns an image into a model input — nothing is reimplemented for serving. Verified by an automated determinism test in <code>tests/test_preprocessing.py</code>.</p>
+    </div>
+    <div class="result-img-wrap reveal" style="margin-top:24px;">
+      <img class="result-img" src="asset/img/results/preprocessing_before_after.png" alt="Before/after comparison of three real claim photos through the preprocessing pipeline">
+      <p class="source-note">Real output of <code style="font-family:var(--font-mono);color:var(--teal);">src/preprocessing.preprocess()</code> on three validation images — from <code style="font-family:var(--font-mono);">notebooks/01_eda.ipynb</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 DATASET ============ -->
+<section id="dataset">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">03 · DATASET</div>
+      <h2>2,300 labeled images, binary ground truth only</h2>
+      <p>Source: Kaggle — <code style="font-family:var(--font-mono);font-size:0.85em;color:var(--teal);">anujms/car-damage-detection</code>. Images are organized into <code style="font-family:var(--font-mono);font-size:0.85em;">training/</code> and <code style="font-family:var(--font-mono);font-size:0.85em;">validation/</code>, each split into <code style="font-family:var(--font-mono);font-size:0.85em;">00-damage</code> and <code style="font-family:var(--font-mono);font-size:0.85em;">01-whole</code>.</p>
+    </div>
+    <div class="grid-3 reveal" style="margin-bottom:32px;">
+      <div class="card"><div class="stat-num">2,300</div><div class="stat-label">Total images</div><div class="stat-foot">3-channel RGB, variable native resolution</div></div>
+      <div class="card"><div class="stat-num">1,840 / 460</div><div class="stat-label">Train / Validation split</div><div class="stat-foot">80% / 20% of the dataset</div></div>
+      <div class="card"><div class="stat-num">2</div><div class="stat-label">Classes</div><div class="stat-foot">00-damage · 01-whole — no severity or part labels</div></div>
+    </div>
+    <div class="dataset-layout reveal">
+      <div class="chart-box">
+        <h4>Image count by split</h4>
+        <canvas id="splitChart" height="220"></canvas>
+        <p class="source-note">Real counts from <code style="font-family:var(--font-mono);color:var(--teal);">src/ingestion.dataset_summary()</code> — not model output.</p>
+      </div>
+      <div class="chart-box">
+        <h4>Per-class balance within each split</h4>
+        <table class="mini-table">
+          <tr><th>Split</th><th>00-damage</th><th>01-whole</th></tr>
+          <tr><td>Training</td><td class="num">920</td><td class="num">920</td></tr>
+          <tr><td>Validation</td><td class="num">230</td><td class="num">230</td></tr>
+        </table>
+        <p class="source-note">Perfectly balanced within each split — no class weighting needed in the loss function. Verified programmatically during ingestion (<code style="font-family:var(--font-mono);color:var(--teal);">notebooks/01_eda.ipynb</code>).</p>
+      </div>
+    </div>
+    <div class="skew-callout reveal" style="border-color:var(--line);background:var(--panel);margin-top:24px;">
+      <span class="tag" style="color:var(--ink-muted);border-color:var(--line);">CONSTRAINT</span>
+      <p>No masks or bounding boxes are provided. This is a hard constraint that shapes the explainability approach (§06 — Grad-CAM as weak localization) and the future segmentation roadmap (§10).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 MODELING ============ -->
+<section id="modeling">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">04 · MODELING</div>
+      <h2>Two backbones, two training phases, one clear winner</h2>
+      <p>Transfer learning from ImageNet weights, compared head-to-head across two architectures with the identical two-phase training protocol, same seed, same data.</p>
+    </div>
+    <div class="grid-2 reveal" style="margin-bottom:36px;">
+      <div class="card model-card">
+        <h3>ResNet50 <span style="color:var(--ink-faint);font-weight:400;">— IMAGENET1K_V2</span></h3>
+        <p>Deeper residual backbone. Selected as the deployed model — see comparison below.</p>
+        <div class="tag-row"><span class="tag win">winner</span><span class="tag">torchvision.models</span><span class="tag">frozen → fine-tuned</span></div>
+        <div class="mini-metric">val_accuracy <b>0.9435</b> · ROC-AUC <b>0.9858</b></div>
+      </div>
+      <div class="card model-card">
+        <h3>EfficientNet-B0</h3>
+        <p>Lighter compound-scaled backbone. Underperformed ResNet50 by ~5.6 points on this dataset size — plausibly because 1,840 training images favor ResNet50's more mature ImageNet1K_V2 transfer weights over EfficientNet's compound-scaling advantage, which tends to show up at larger data scale.</p>
+        <div class="tag-row"><span class="tag">torchvision.models</span><span class="tag">frozen → fine-tuned</span></div>
+        <div class="mini-metric">val_accuracy <b>0.8870</b> · ROC-AUC <b>0.9620</b></div>
+      </div>
+    </div>
+    <div class="phase-line reveal">
+      <div class="phase-item">
+        <span class="mono-tag">PHASE 1</span>
+        <h4>Head training, backbone frozen</h4>
+        <p>Only the classification head is trained (8 epochs, lr 1e-3); convolutional weights stay frozen to adapt quickly without disturbing pretrained features.</p>
+      </div>
+      <div class="phase-item">
+        <span class="mono-tag">PHASE 2</span>
+        <h4>Fine-tuning the last block</h4>
+        <p>The final convolutional block is unfrozen and trained at a reduced learning rate (15 epochs, lr 1e-5), with <code style="font-family:var(--font-mono);font-size:0.85em;">ReduceLROnPlateau</code>, early stopping (patience 5), and checkpoint selection by lowest validation loss.</p>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:32px;">
+      <img class="result-img" src="asset/img/results/training_curves.png" alt="Validation loss and accuracy curves for ResNet50 vs EfficientNet-B0 across both training phases">
+      <p class="source-note">Real training curves from <code style="font-family:var(--font-mono);color:var(--teal);">outputs/history/</code>. Dotted line marks the Phase 2 (fine-tuning) boundary — both curves visibly improve once the last block unfreezes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 RESULTS ============ -->
+<section id="results">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">05 · RESULTS</div>
+      <h2>94.3% validation accuracy, 0.986 ROC-AUC</h2>
+      <p>Every number below is computed by <code style="font-family:var(--font-mono);font-size:0.85em;color:var(--teal);">src/evaluate.py</code> on the 460-image held-out validation split for the deployed model (ResNet50) — raw JSON in <code style="font-family:var(--font-mono);font-size:0.85em;">outputs/metrics/metrics_resnet50.json</code>.</p>
+    </div>
+    <div class="results-banner reveal">
+      <span class="dot" style="margin-top:5px;"></span>
+      <p><strong>All numbers on this page are real</strong>, computed on the model's actual held-out validation predictions — not estimates or placeholders. Reproduce with <code style="font-family:var(--font-mono);color:var(--teal);">python -m src.evaluate --arch resnet50</code>.</p>
+    </div>
+    <div class="results-layout reveal">
+      <div>
+        <h4 style="font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Confusion matrix (threshold = 0.50)</h4>
+        <div class="cm-grid">
+          <div class="cm-cell"><div class="cm-val">214</div><div class="cm-lab">True Negative</div></div>
+          <div class="cm-cell flag"><div class="cm-val">16</div><div class="cm-lab">False Positive</div></div>
+          <div class="cm-cell flag"><div class="cm-val">10</div><div class="cm-lab">False Negative ⚑ costliest</div></div>
+          <div class="cm-cell"><div class="cm-val">220</div><div class="cm-lab">True Positive</div></div>
+        </div>
+        <p class="source-note">The FN cell is flagged because a missed damage claim is the most expensive error in this workflow (§01). 10 of 230 damaged vehicles were missed at the default threshold.</p>
+        <img class="result-img" src="asset/img/results/roc_curve.png" alt="ROC curve for the damage class, AUC 0.9858">
+      </div>
+      <div>
+        <h4 style="font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;">Metrics — damage class</h4>
+        <div class="metric-grid">
+          <div class="metric-card priority"><div class="m-val">0.957</div><div class="m-lab">Recall (priority)</div><div class="m-note">220 / 230 damaged vehicles caught</div></div>
+          <div class="metric-card"><div class="m-val">0.932</div><div class="m-lab">Precision</div><div class="m-note">16 false alarms out of 236 flagged</div></div>
+          <div class="metric-card"><div class="m-val">0.944</div><div class="m-lab">F1-score</div><div class="m-note">harmonic mean, damage class</div></div>
+          <div class="metric-card"><div class="m-val">0.986</div><div class="m-lab">ROC-AUC</div><div class="m-note">threshold-independent separability</div></div>
+        </div>
+        <div class="threshold-callout">
+          <p><strong>Threshold tuning, business trade-off:</strong> lowering the decision threshold from 0.50 to <strong>0.25</strong> raises damage recall from 95.7% to <strong>98.7%</strong> (missed claims drop from 10 to 3 of 230) at the cost of precision falling from 93.2% to 90.8% (false alarms rise from 16 to 23). In this workflow that trade is favorable: a false positive costs one extra human review; a false negative can wrongly close a legitimate claim.</p>
+        </div>
+        <img class="result-img" src="asset/img/results/threshold_tradeoff.png" alt="Precision and recall on the damage class as a function of decision threshold">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 EXPLAINABILITY ============ -->
+<section id="explainability">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">06 · EXPLAINABILITY</div>
+      <h2>Grad-CAM shows where the model looked — not a mask</h2>
+      <p>Grad-CAM (via <code style="font-family:var(--font-mono);font-size:0.85em;color:var(--teal);">pytorch-grad-cam</code>) is computed on the last convolutional layer and rendered as overlays for both correct and incorrect predictions, across both classes — partly to check the model isn't relying on shortcuts like watermarks or backgrounds.</p>
+    </div>
+    <div class="explain-layout reveal">
+      <div class="card" style="padding:28px;">
+        <table class="compare-table">
+          <tr><th></th><th>Grad-CAM (used here)</th><th>True segmentation (roadmap)</th></tr>
+          <tr><td>Output</td><td class="gc">Coarse activation heatmap</td><td class="seg">Pixel-level mask</td></tr>
+          <tr><td>Source</td><td class="gc">Gradients of a classifier</td><td class="seg">Dedicated annotation</td></tr>
+          <tr><td>Requires</td><td class="gc">Nothing beyond class labels</td><td class="seg">Masks / polygons per image</td></tr>
+          <tr><td>Metric</td><td class="gc">Qualitative inspection</td><td class="seg">IoU / Dice</td></tr>
+        </table>
+      </div>
+      <div>
+        <p style="color:var(--ink-muted);font-size:14.5px;">The dataset has no masks or bounding boxes, so Grad-CAM is used honestly as a weak, post-hoc localization signal for triage review — never described in this project as segmentation. True pixel-level segmentation is scoped as a separate future phase (§10), with its own dataset and metrics.</p>
+        <div class="gradcam-grid">
+          <figure><img src="asset/img/results/example_tp.png" alt="True positive Grad-CAM example, heatmap on vehicle door damage"><figcaption><b>TP</b> · damage 0.89</figcaption></figure>
+          <figure><img src="asset/img/results/example_fn.png" alt="False negative Grad-CAM example, heatmap on wheel/headlight instead of damage"><figcaption><b>FN</b> · missed, 0.71</figcaption></figure>
+          <figure><img src="asset/img/results/example_fp.png" alt="False positive Grad-CAM example, heatmap on reflective showroom trunk"><figcaption><b>FP</b> · false alarm, 0.86</figcaption></figure>
+          <figure><img src="asset/img/results/example_tn.png" alt="True negative Grad-CAM example, heatmap on intact vehicle body"><figcaption><b>TN</b> · correct, 1.00</figcaption></figure>
+        </div>
+        <p class="shortcut-note"><strong>Honest shortcut-learning check:</strong> in several false negatives the heatmap concentrated on the wheel or headlight rather than the damaged panel, and in one false positive the model flagged a pristine showroom photo — likely reacting to reflections and a checkered dealership floor absent from most training images. Both are documented as real limitations (§10), not smoothed over.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 API ============ -->
+<section id="api">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">07 · SERVING</div>
+      <h2>A minimal, explicit API contract</h2>
+      <p>Served with FastAPI + uvicorn, deployable for free on Hugging Face Spaces (Docker SDK). The model is also published to the Hugging Face Hub with a full model card documenting intended use and limitations.</p>
+    </div>
+    <div class="grid-2 reveal">
+      <div class="api-card">
+        <div class="api-head"><span class="method get">GET</span><span class="api-path">/health</span></div>
+        <pre>{
+  <span class="k">"status"</span>: <span class="s">"ok"</span>,
+  <span class="k">"model"</span>: <span class="s">"resnet50"</span>,
+  <span class="k">"device"</span>: <span class="s">"cuda"</span>
+}</pre>
+      </div>
+      <div class="api-card">
+        <div class="api-head"><span class="method post">POST</span><span class="api-path">/predict</span></div>
+        <pre>{
+  <span class="k">"prediction"</span>: <span class="s">"00-damage"</span>,
+  <span class="k">"confidence"</span>: 0.89,
+  <span class="k">"probabilities"</span>: {
+    <span class="k">"00-damage"</span>: 0.89,
+    <span class="k">"01-whole"</span>: 0.11
+  },
+  <span class="k">"threshold_used"</span>: 0.5
+}</pre>
+      </div>
+    </div>
+    <ul class="api-notes reveal">
+      <li>Schema shown above illustrates the real response shape (values are a real example from the validation set, not fabricated).</li>
+      <li><code style="font-family:var(--font-mono);color:var(--teal);">POST /predict-with-gradcam</code> — same response plus a base64-encoded Grad-CAM overlay, powering the interactive demo at the API root (<code style="font-family:var(--font-mono);color:var(--teal);">GET /</code>).</li>
+      <li><code style="font-family:var(--font-mono);color:var(--teal);">/predict</code> validates request content-type (415 on mismatch) and returns 422 on undecodable image bytes — both paths covered by <code style="font-family:var(--font-mono);color:var(--teal);">tests/test_api.py</code>.</li>
+      <li>Inference reuses the exact same <code style="font-family:var(--font-mono);color:var(--teal);">preprocess()</code> function used in training (§02) — no separate serving-side implementation.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 08 BUSINESS MODEL ============ -->
+<section id="business">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">08 · BUSINESS MODEL</div>
+      <h2>How a triage API like this earns its keep</h2>
+      <p>ClaimSight is a portfolio prototype, not a live commercial product — no payments are processed anywhere on this site. The pricing below illustrates how the underlying API contract (§07) maps directly onto a usage-based SaaS model that insurers and claims platforms already buy into today.</p>
+    </div>
+    <div class="pricing-grid reveal">
+      <div class="price-card">
+        <h3>Free</h3>
+        <div class="price">$0</div>
+        <ul>
+          <li>50 predictions / month</li>
+          <li>Interactive demo access</li>
+          <li>Community support</li>
+          <li>Default 0.50 threshold</li>
+        </ul>
+        <a class="btn-ghost" href="#api">Try the demo ↓</a>
+      </div>
+      <div class="price-card highlight">
+        <span class="plan-tag">Most common</span>
+        <h3>Starter</h3>
+        <div class="price">$49 <span>/ month</span></div>
+        <ul>
+          <li>2,000 predictions / month</li>
+          <li>Configurable decision threshold</li>
+          <li>Email support, 48h SLA</li>
+          <li>Usage dashboard + API keys</li>
+        </ul>
+        <a class="btn-primary" href="#" style="text-decoration:none;display:block;">Start trial →</a>
+      </div>
+      <div class="price-card">
+        <h3>Enterprise</h3>
+        <div class="price">Custom</div>
+        <ul>
+          <li>Volume-based pricing</li>
+          <li>On-prem / VPC deployment</li>
+          <li>Fine-tuning on your claim archive</li>
+          <li>Dedicated support + uptime SLA</li>
+        </ul>
+        <a class="btn-ghost" href="#">Contact sales →</a>
+      </div>
+    </div>
+    <p class="business-note">Target customer: mid-size auto insurers, claims-management SaaS platforms, and body-shop networks that want an automated first-pass filter before a human adjuster ever opens a claim — cutting reviewer time on the ~49% of submissions (per this validation split) that show no visible damage at all.</p>
+  </div>
+</section>
+
+<!-- ============ 09 SKILL MAP ============ -->
+<section id="skills">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">09 · SKILL → EVIDENCE</div>
+      <h2>Every claimed skill maps to a repository artifact</h2>
+      <p>Every path below exists in the repository and is exercised by an automated test or a script that was actually run to produce the numbers on this page.</p>
+    </div>
+    <div class="card reveal" style="padding:8px 22px;">
+      <table class="skill-table">
+        <tr><th>Skill</th><th>Evidence</th></tr>
+        <tr><td>PyTorch transfer learning (2 backbones, 2 phases)</td><td><code>src/train.py</code>, <code>src/model.py</code></td></tr>
+        <tr><td>Deterministic pipeline / zero-skew</td><td><code>src/preprocessing.py</code> → imported by <code>src/dataset.py</code> &amp; <code>app/main.py</code>, verified in <code>tests/test_preprocessing.py</code></td></tr>
+        <tr><td>Data augmentation (Albumentations)</td><td><code>src/dataset.py</code></td></tr>
+        <tr><td>Business-oriented evaluation &amp; threshold tuning</td><td><code>src/evaluate.py</code>, <code>outputs/metrics/</code></td></tr>
+        <tr><td>Explainability (Grad-CAM)</td><td><code>src/explain.py</code>, <code>outputs/gradcam/</code></td></tr>
+        <tr><td>Model serving (FastAPI, tested)</td><td><code>app/main.py</code>, <code>tests/test_api.py</code> (18/18 passing)</td></tr>
+        <tr><td>Reproducibility &amp; pipeline engineering</td><td><code>requirements.txt</code> (pinned), fixed seeds, per-run metadata JSON</td></tr>
+        <tr><td>Model publication (Hugging Face Hub)</td><td><code>scripts/publish_hf.py</code> + generated model card</td></tr>
+        <tr><td>Free-tier deployment (Docker, Hugging Face Spaces)</td><td><code>Dockerfile</code></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10 LIMITATIONS ============ -->
+<section id="limitations">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">10 · LIMITATIONS &amp; ROADMAP</div>
+      <h2>What this system does not do — yet</h2>
+    </div>
+    <div class="limit-layout reveal">
+      <div>
+        <h4 style="font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Known limitations</h4>
+        <ul class="limit-list">
+          <li>Binary output only — no severity or damaged-part classification.</li>
+          <li>No masks or bounding boxes → Grad-CAM is weak localization only.</li>
+          <li>Modest dataset size (2,300 images, one source) → real domain-shift risk against a real insurer's photo distribution.</li>
+          <li>Observed false positives on reflective, studio-lit dealership photos — underrepresented in training data.</li>
+          <li>A small number of false negatives concentrated attention on wheels/headlights rather than the damaged panel.</li>
+          <li>Not validated as a repair-cost estimator — triage signal only, human review required.</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="font-family:var(--font-mono);font-size:12px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Roadmap</h4>
+        <ul class="road-list">
+          <li>Annotate a subset with CVAT / Label Studio, or adopt the CarDD dataset, for true pixel-level segmentation.</li>
+          <li>Train a U-Net via <code style="font-family:var(--font-mono);color:var(--teal);">segmentation-models-pytorch</code> and report IoU / Dice once real masks exist.</li>
+          <li>Extend to multi-class damage severity and part localization.</li>
+          <li>Expand training data with dealership/showroom photos to close the observed false-positive gap.</li>
+          <li>Add basic drift monitoring to the serving layer.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="disclaimer">
+      <span class="dot pending" style="margin-top:5px;"></span>
+      <p><strong>ClaimSight is a decision-support prototype for claims triage.</strong> It does not issue, deny, or finalize any insurance claim. Every flagged prediction requires human review.</p>
+    </div>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="asset/img/logo_renands_nav.png" alt="renan DS logo">
+        <div>
+          <div class="brand-mark" style="font-size:16px;">Claim<span style="color:var(--amber);">Sight</span></div>
+          <p class="footer-credit" style="margin-top:4px;">Portfolio project by <strong style="color:var(--ink-muted);">renan DS</strong> — applied computer vision &amp; ML pipeline engineering.</p>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/" target="_blank" rel="noopener">GitHub ↗</a>
+        <a href="https://huggingface.co/" target="_blank" rel="noopener">Hugging Face Hub ↗</a>
+        <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn ↗</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ---- dataset split chart (real numbers) ----
+const ctx = document.getElementById('splitChart');
+if (ctx && window.Chart) {
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Training (1,840)', 'Validation (460)'],
+      datasets: [{
+        data: [1840, 460],
+        backgroundColor: ['#FFA23C', '#3FD6B0'],
+        borderColor: '#171D26',
+        borderWidth: 3
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#8993A4', font: { family: 'IBM Plex Mono', size: 11 }, padding: 16 }
+        }
+      }
+    }
+  });
+}
+
+// ---- scroll reveal ----
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: 0.12 });
+revealEls.forEach(el => io.observe(el));
+
+// ---- active nav link on scroll ----
+const navLinks = document.querySelectorAll('nav.links a');
+const sections = Array.from(navLinks).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const navIO = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const id = '#' + entry.target.id;
+    const link = document.querySelector(`nav.links a[href="${id}"]`);
+    if (!link) return;
+    if (entry.isIntersecting) { navLinks.forEach(l => l.classList.remove('active')); link.classList.add('active'); }
+  });
+}, { rootMargin: '-40% 0px -50% 0px' });
+sections.forEach(s => navIO.observe(s));
+
+// ---- mobile nav toggle (simple show/hide of links inline) ----
+const toggle = document.querySelector('.nav-toggle');
+const linksEl = document.querySelector('nav.links');
+if (toggle) {
+  toggle.addEventListener('click', () => {
+    const open = linksEl.style.display === 'flex';
+    linksEl.style.display = open ? 'none' : 'flex';
+    linksEl.style.cssText += open ? '' : 'position:absolute;top:64px;left:0;right:0;background:#171D26;flex-direction:column;padding:16px 28px;border-bottom:1px solid #2A3140;gap:16px;';
+  });
+}
+</script>
+</body>
+</html>

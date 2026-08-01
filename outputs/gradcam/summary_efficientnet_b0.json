@@ -1,0 +1,36 @@
+{
+  "arch": "efficientnet_b0",
+  "outcome_counts": {
+    "TP": 205,
+    "FP": 27,
+    "TN": 203,
+    "FN": 25
+  },
+  "summary_grid": "outputs\\gradcam\\summary_grid_efficientnet_b0.png",
+  "individual_overlays": {
+    "TP": [
+      "outputs\\gradcam\\efficientnet_b0\\TP\\0001_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TP\\0002_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TP\\0003_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TP\\0004_gradcam.png"
+    ],
+    "FP": [
+      "outputs\\gradcam\\efficientnet_b0\\FP\\0019_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FP\\0076_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FP\\0080_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FP\\0090_gradcam.png"
+    ],
+    "TN": [
+      "outputs\\gradcam\\efficientnet_b0\\TN\\0001_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TN\\0002_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TN\\0003_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\TN\\0004_gradcam.png"
+    ],
+    "FN": [
+      "outputs\\gradcam\\efficientnet_b0\\FN\\0017_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FN\\0018_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FN\\0027_gradcam.png",
+      "outputs\\gradcam\\efficientnet_b0\\FN\\0034_gradcam.png"
+    ]
+  }
+}

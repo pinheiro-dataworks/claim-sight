@@ -1,0 +1,33 @@
+# Claude Code / assistant working directory — never publish
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Virtual environment
+.venv/
+venv/
+
+# Dataset (downloaded via src/ingestion.py — not committed, ~130MB)
+data/raw/
+data/processed/
+
+# Trained checkpoints (large binaries — published to Hugging Face Hub
+# instead, see scripts/publish_hf.py). Metadata JSON stays tracked.
+models/*.pt
+!models/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Secrets
+.env
+*.token

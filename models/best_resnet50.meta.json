@@ -1,0 +1,11 @@
+{
+  "arch": "resnet50",
+  "seed": 42,
+  "device": "cuda",
+  "phase1_epochs_ran": 8,
+  "phase2_epochs_ran": 15,
+  "best_val_loss": 0.14994667431582576,
+  "checkpoint": "models\\best_resnet50.pt",
+  "torch_version": "2.6.0+cu124",
+  "trained_at_utc": "2026-08-01T22:51:16Z"
+}

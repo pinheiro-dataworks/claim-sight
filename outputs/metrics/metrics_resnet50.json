@@ -1,0 +1,260 @@
+{
+  "arch": "resnet50",
+  "n_validation": 460,
+  "default_threshold": {
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 214,
+      "fp": 16,
+      "fn": 10,
+      "tp": 220
+    },
+    "classification_report": {
+      "01-whole": {
+        "precision": 0.9553571428571429,
+        "recall": 0.9304347826086956,
+        "f1-score": 0.9427312775330396,
+        "support": 230.0
+      },
+      "00-damage": {
+        "precision": 0.9322033898305084,
+        "recall": 0.9565217391304348,
+        "f1-score": 0.944206008583691,
+        "support": 230.0
+      },
+      "accuracy": 0.9434782608695652,
+      "macro avg": {
+        "precision": 0.9437802663438257,
+        "recall": 0.9434782608695652,
+        "f1-score": 0.9434686430583653,
+        "support": 460.0
+      },
+      "weighted avg": {
+        "precision": 0.9437802663438256,
+        "recall": 0.9434782608695652,
+        "f1-score": 0.9434686430583653,
+        "support": 460.0
+      }
+    },
+    "roc_auc": 0.9858034026465028,
+    "accuracy": 0.9434782608695652
+  },
+  "threshold_table": [
+    {
+      "threshold": 0.05,
+      "recall_damage": 1.0,
+      "precision_damage": 0.777,
+      "f1_damage": 0.8745,
+      "fn": 0,
+      "fp": 66
+    },
+    {
+      "threshold": 0.1,
+      "recall_damage": 1.0,
+      "precision_damage": 0.8244,
+      "f1_damage": 0.9037,
+      "fn": 0,
+      "fp": 49
+    },
+    {
+      "threshold": 0.15,
+      "recall_damage": 1.0,
+      "precision_damage": 0.8519,
+      "f1_damage": 0.92,
+      "fn": 0,
+      "fp": 40
+    },
+    {
+      "threshold": 0.2,
+      "recall_damage": 0.9957,
+      "precision_damage": 0.8911,
+      "f1_damage": 0.9405,
+      "fn": 1,
+      "fp": 28
+    },
+    {
+      "threshold": 0.25,
+      "recall_damage": 0.987,
+      "precision_damage": 0.908,
+      "f1_damage": 0.9458,
+      "fn": 3,
+      "fp": 23
+    },
+    {
+      "threshold": 0.3,
+      "recall_damage": 0.9739,
+      "precision_damage": 0.9106,
+      "f1_damage": 0.9412,
+      "fn": 6,
+      "fp": 22
+    },
+    {
+      "threshold": 0.35,
+      "recall_damage": 0.9696,
+      "precision_damage": 0.9177,
+      "f1_damage": 0.9429,
+      "fn": 7,
+      "fp": 20
+    },
+    {
+      "threshold": 0.4,
+      "recall_damage": 0.9696,
+      "precision_damage": 0.9253,
+      "f1_damage": 0.9469,
+      "fn": 7,
+      "fp": 18
+    },
+    {
+      "threshold": 0.45,
+      "recall_damage": 0.9696,
+      "precision_damage": 0.9292,
+      "f1_damage": 0.9489,
+      "fn": 7,
+      "fp": 17
+    },
+    {
+      "threshold": 0.5,
+      "recall_damage": 0.9565,
+      "precision_damage": 0.9322,
+      "f1_damage": 0.9442,
+      "fn": 10,
+      "fp": 16
+    },
+    {
+      "threshold": 0.55,
+      "recall_damage": 0.9435,
+      "precision_damage": 0.9353,
+      "f1_damage": 0.9394,
+      "fn": 13,
+      "fp": 15
+    },
+    {
+      "threshold": 0.6,
+      "recall_damage": 0.9348,
+      "precision_damage": 0.9389,
+      "f1_damage": 0.9368,
+      "fn": 15,
+      "fp": 14
+    },
+    {
+      "threshold": 0.65,
+      "recall_damage": 0.9174,
+      "precision_damage": 0.942,
+      "f1_damage": 0.9295,
+      "fn": 19,
+      "fp": 13
+    },
+    {
+      "threshold": 0.7,
+      "recall_damage": 0.9087,
+      "precision_damage": 0.95,
+      "f1_damage": 0.9289,
+      "fn": 21,
+      "fp": 11
+    },
+    {
+      "threshold": 0.75,
+      "recall_damage": 0.9,
+      "precision_damage": 0.9628,
+      "f1_damage": 0.9303,
+      "fn": 23,
+      "fp": 8
+    },
+    {
+      "threshold": 0.8,
+      "recall_damage": 0.8565,
+      "precision_damage": 0.961,
+      "f1_damage": 0.9057,
+      "fn": 33,
+      "fp": 8
+    },
+    {
+      "threshold": 0.85,
+      "recall_damage": 0.8348,
+      "precision_damage": 0.96,
+      "f1_damage": 0.893,
+      "fn": 38,
+      "fp": 8
+    },
+    {
+      "threshold": 0.9,
+      "recall_damage": 0.7957,
+      "precision_damage": 0.9734,
+      "f1_damage": 0.8756,
+      "fn": 47,
+      "fp": 5
+    },
+    {
+      "threshold": 0.95,
+      "recall_damage": 0.7174,
+      "precision_damage": 0.988,
+      "f1_damage": 0.8312,
+      "fn": 65,
+      "fp": 2
+    }
+  ],
+  "recall_priority_threshold": {
+    "threshold": 0.25,
+    "recall_damage": 0.987,
+    "precision_damage": 0.908,
+    "f1_damage": 0.9458,
+    "fn": 3,
+    "fp": 23
+  },
+  "recall_priority_metrics": {
+    "threshold": 0.25,
+    "confusion_matrix": {
+      "tn": 207,
+      "fp": 23,
+      "fn": 3,
+      "tp": 227
+    },
+    "classification_report": {
+      "01-whole": {
+        "precision": 0.9857142857142858,
+        "recall": 0.9,
+        "f1-score": 0.9409090909090909,
+        "support": 230.0
+      },
+      "00-damage": {
+        "precision": 0.908,
+        "recall": 0.9869565217391304,
+        "f1-score": 0.9458333333333333,
+        "support": 230.0
+      },
+      "accuracy": 0.9434782608695652,
+      "macro avg": {
+        "precision": 0.9468571428571428,
+        "recall": 0.9434782608695652,
+        "f1-score": 0.9433712121212121,
+        "support": 460.0
+      },
+      "weighted avg": {
+        "precision": 0.9468571428571428,
+        "recall": 0.9434782608695652,
+        "f1-score": 0.9433712121212121,
+        "support": 460.0
+      }
+    },
+    "roc_auc": 0.9858034026465028,
+    "accuracy": 0.9434782608695652
+  },
+  "false_negative_count": 10,
+  "false_negative_paths": [
+    "data\\raw\\validation\\00-damage\\0048.JPEG",
+    "data\\raw\\validation\\00-damage\\0050.jpeg",
+    "data\\raw\\validation\\00-damage\\0062.JPEG",
+    "data\\raw\\validation\\00-damage\\0109.JPEG",
+    "data\\raw\\validation\\00-damage\\0116.JPEG",
+    "data\\raw\\validation\\00-damage\\0141.JPEG",
+    "data\\raw\\validation\\00-damage\\0169.JPEG",
+    "data\\raw\\validation\\00-damage\\0171.JPEG",
+    "data\\raw\\validation\\00-damage\\0218.JPEG",
+    "data\\raw\\validation\\00-damage\\0229.JPEG"
+  ],
+  "figures": {
+    "confusion_matrix": "outputs\\figures\\confusion_matrix_resnet50.png",
+    "roc_curve": "outputs\\figures\\roc_curve_resnet50.png",
+    "threshold_tradeoff": "outputs\\figures\\threshold_tradeoff_resnet50.png"
+  }
+}

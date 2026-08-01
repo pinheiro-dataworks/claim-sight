@@ -1,0 +1,36 @@
+{
+  "arch": "resnet50",
+  "outcome_counts": {
+    "TP": 220,
+    "FP": 16,
+    "TN": 214,
+    "FN": 10
+  },
+  "summary_grid": "outputs\\gradcam\\summary_grid_resnet50.png",
+  "individual_overlays": {
+    "TP": [
+      "outputs\\gradcam\\resnet50\\TP\\0001_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TP\\0002_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TP\\0003_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TP\\0004_gradcam.png"
+    ],
+    "FP": [
+      "outputs\\gradcam\\resnet50\\FP\\0069_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FP\\0080_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FP\\0093_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FP\\0132_gradcam.png"
+    ],
+    "TN": [
+      "outputs\\gradcam\\resnet50\\TN\\0001_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TN\\0002_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TN\\0003_gradcam.png",
+      "outputs\\gradcam\\resnet50\\TN\\0004_gradcam.png"
+    ],
+    "FN": [
+      "outputs\\gradcam\\resnet50\\FN\\0048_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FN\\0050_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FN\\0062_gradcam.png",
+      "outputs\\gradcam\\resnet50\\FN\\0109_gradcam.png"
+    ]
+  }
+}
