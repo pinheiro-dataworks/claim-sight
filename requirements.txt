@@ -1,14 +1,21 @@
 # Core runtime dependencies, pinned for reproducibility.
 #
-# torch/torchvision: the versions below install CPU-only wheels from
-# PyPI (works everywhere, including free CPU-tier deployments). If you
-# have an NVIDIA GPU and want CUDA acceleration for training, install
-# them separately first with the matching index, e.g.:
-#   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
-# then run `pip install -r requirements.txt` — pip will see the pins
-# already satisfied and skip reinstalling them.
-torch==2.6.0
-torchvision==0.21.0
+# torch/torchvision: explicitly pinned to CPU-only wheels (the +cpu
+# local version, resolved via the extra index below) so this file
+# installs correctly everywhere out of the box — including free
+# CPU-only cloud hosts (Streamlit Community Cloud, CI). PyPI's default
+# Linux wheel for a bare `torch==2.6.0` bundles the full CUDA runtime
+# (~2GB) and reliably blows past free build containers' disk/time
+# budget — that's not hypothetical, it's what broke the first
+# Streamlit Cloud deploy of this project.
+#
+# If you have an NVIDIA GPU and want CUDA-accelerated local training,
+# install requirements.txt first, then override with the CUDA build:
+#   pip install -r requirements.txt
+#   pip install torch==2.6.0+cu124 torchvision==0.21.0+cu124 --index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
 
 # headless build: this project never uses cv2 GUI functions (imshow,
 # namedWindow, ...), and the full "opencv-python" build fails to import
