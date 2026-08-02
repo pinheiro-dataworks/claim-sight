@@ -353,11 +353,11 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
       <p class="hero-sub">ClaimSight is a binary vehicle-damage classifier for auto-insurance claim triage — from a deterministic ingestion pipeline through Grad-CAM explainability to a served FastAPI endpoint. It's a decision-support tool, not an autonomous adjuster: every flagged claim still routes to a human reviewer.</p>
       <div class="hero-ctas">
         <a href="#results" class="btn-primary">See real results ↓</a>
-        <a href="#api" class="btn-ghost">Try the live demo</a>
+        <a href="#api" class="btn-ghost">View the API contract</a>
       </div>
       <div class="build-status">
         <span class="dot"></span>
-        BUILD STATUS: training complete · ResNet50 selected (94.3% val. accuracy · ROC-AUC 0.986) · API live
+        BUILD STATUS: training complete · ResNet50 selected (94.3% val. accuracy · ROC-AUC 0.986) · API tested (18/18), run locally
       </div>
       <div class="chip-strip">
         <div class="chip"><span class="swatch" style="background:var(--amber)"></span>class: <b>00-damage</b> · confidence: 0.89</div>
@@ -587,7 +587,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
     <div class="section-head reveal">
       <div class="eyebrow">07 · SERVING</div>
       <h2>A minimal, explicit API contract</h2>
-      <p>Served with FastAPI + uvicorn, containerized via the included Dockerfile for any host. The live interactive demo runs on Streamlit Community Cloud; the model itself is published to the Hugging Face Hub with a full model card documenting intended use and limitations.</p>
+      <p>Served with FastAPI + uvicorn, containerized via the included Dockerfile for any host. Includes an interactive Streamlit demo (<code>streamlit_app.py</code>) that runs the same code locally — <code>streamlit run streamlit_app.py</code>. The trained model itself is published to the Hugging Face Hub with a full model card documenting intended use and limitations.</p>
     </div>
     <div class="grid-2 reveal">
       <div class="api-card">
@@ -688,7 +688,8 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
         <tr><td>Reproducibility &amp; pipeline engineering</td><td><code>requirements.txt</code> (pinned), fixed seeds, per-run metadata JSON</td></tr>
         <tr><td>Model publication (Hugging Face Hub)</td><td><code>scripts/publish_hf.py</code> + generated model card</td></tr>
         <tr><td>Containerized deployment</td><td><code>Dockerfile</code></td></tr>
-        <tr><td>Free-tier live deployment (3 platforms)</td><td>GitHub Pages, Hugging Face Hub, <code>streamlit_app.py</code></td></tr>
+        <tr><td>Free-tier live deployment</td><td>GitHub Pages, Hugging Face Hub</td></tr>
+        <tr><td>Interactive demo UI (runs locally)</td><td><code>streamlit_app.py</code></td></tr>
       </table>
     </div>
   </div>

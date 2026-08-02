@@ -150,7 +150,7 @@ claimsight/
 │   ├── test_preprocessing.py  # determinism + shape contract (12 tests)
 │   └── test_api.py            # API contract (6 tests)
 ├── web/index.html            # portfolio landing page (this project's marketing site)
-├── streamlit_app.py          # live interactive demo (Streamlit Community Cloud, free)
+├── streamlit_app.py          # interactive demo UI — run locally: streamlit run streamlit_app.py
 ├── Dockerfile                # containerized FastAPI service, for any container host
 ├── requirements.txt          # pinned runtime dependencies
 └── requirements-dev.txt      # + testing/notebook tooling
@@ -342,30 +342,29 @@ payment method is required anywhere in this stack:
 | Component | Where | Status |
 |---|---|---|
 | Code + this README | [GitHub](https://github.com/pinheiro-dataworks/claim-sight) (public repo) | ✅ Live |
-| Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | Deploys automatically on push via `.github/workflows/pages.yml` — enable once in repo Settings → Pages → Source: "GitHub Actions" |
+| Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | ✅ Live — deploys automatically on push via `.github/workflows/pages.yml` |
 | Trained model weights | [Hugging Face Hub](https://huggingface.co/PinheiroDataworks/claimsight-damage-detection) | ✅ Live — both checkpoints + model card |
-| Live interactive demo (`streamlit_app.py`) | Streamlit Community Cloud | Deploy at [share.streamlit.io](https://share.streamlit.io) — see below |
-| Served REST API (`app/main.py`, tested) | Run locally, or any container host | See below |
+| Interactive demo UI (`streamlit_app.py`) | Run locally | Built and tested; not hosted publicly (see note) |
+| Served REST API (`app/main.py`, tested) | Run locally, or any container host | Built and tested (18/18); not hosted publicly |
 
-> **Note on Hugging Face Spaces:** this project originally targeted a
-> Space (Docker SDK) for the live demo, but HF now requires a paid PRO
-> plan to run Docker/Gradio Spaces on the free CPU tier — a change made
-> after this project's initial design. To keep the "zero cost"
-> requirement, the live demo runs on **Streamlit Community Cloud**
-> instead (genuinely free, no card), reusing the exact same
-> `preprocess()` / `build_model()` / Grad-CAM code as the FastAPI app.
-> The `Dockerfile` and FastAPI service are still fully built and
-> tested — run them locally, or deploy them anywhere you do have free
-> or paid container capacity.
+> **Note on the live demo:** this project originally targeted a free
+> Hugging Face Space (Docker SDK), but HF now requires a paid PRO plan
+> to run Docker/Gradio Spaces on the free CPU tier — a change made
+> after this project's initial design. Streamlit Community Cloud was
+> the free fallback, but its build environment ran into unresolved
+> dependency-install failures specific to that platform. Rather than
+> spend paid compute chasing a platform-specific issue, both the
+> Streamlit demo and the FastAPI service are fully built, tested, and
+> documented to run locally or on any container host — the "zero cost"
+> requirement stays intact; the live-hosting piece is the one part
+> deliberately left as a local run rather than forced onto a paid tier.
 
 ```bash
-# Already done: model published to
+# Already live: model published to
 # huggingface.co/PinheiroDataworks/claimsight-damage-detection
-# (python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection)
 
-# Live demo: deploy streamlit_app.py at https://share.streamlit.io
-# (connect this GitHub repo, main file path: streamlit_app.py)
-# It downloads weights from the Hub at startup — no local checkpoint needed.
+# Interactive demo — run locally, downloads weights from the Hub automatically:
+streamlit run streamlit_app.py
 
 # Tested REST API — run anywhere, including locally:
 uvicorn app.main:app --reload
@@ -409,7 +408,8 @@ damage at all — time an adjuster never needs to spend.
 | Reproducibility & pipeline engineering | pinned `requirements.txt`, fixed seeds, per-run metadata JSON |
 | MLOps / model publication | `scripts/publish_hf.py` + generated model card |
 | Containerized deployment | `Dockerfile` |
-| Free-tier live deployment across 3 platforms | GitHub Pages, Hugging Face Hub, Streamlit Community Cloud |
+| Free-tier live deployment | GitHub Pages, Hugging Face Hub |
+| Interactive demo UI (runs locally) | `streamlit_app.py` |
 
 ## License
 
