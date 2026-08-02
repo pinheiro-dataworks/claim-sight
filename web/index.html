@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
 /* ============ TOKENS ============ */
 :root{
@@ -180,6 +179,11 @@ section{position:relative;z-index:1;padding:88px 0;border-top:1px solid var(--li
 .dataset-layout{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;}
 .chart-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;}
 .chart-box h4{font-size:13px;font-family:var(--font-mono);color:var(--ink-muted);font-weight:500;margin-bottom:14px;}
+.split-bar{display:flex;height:34px;border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:6px;}
+.split-bar-train{width:80%;background:var(--amber);}
+.split-bar-val{width:20%;background:var(--teal);}
+.split-bar-legend{display:flex;justify-content:space-between;margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--ink-muted);flex-wrap:wrap;gap:8px;}
+.split-bar-legend .swatch{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;}
 .mini-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
 .mini-table th,.mini-table td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-soft);}
 .mini-table th{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:500;}
@@ -447,7 +451,14 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
     <div class="dataset-layout reveal">
       <div class="chart-box">
         <h4>Image count by split</h4>
-        <canvas id="splitChart" height="220"></canvas>
+        <div class="split-bar" role="img" aria-label="1,840 training images (80%), 460 validation images (20%)">
+          <div class="split-bar-train"></div>
+          <div class="split-bar-val"></div>
+        </div>
+        <div class="split-bar-legend">
+          <span><span class="swatch" style="background:var(--amber)"></span>Training — 1,840 (80%)</span>
+          <span><span class="swatch" style="background:var(--teal)"></span>Validation — 460 (20%)</span>
+        </div>
         <p class="source-note">Real counts from <code style="font-family:var(--font-mono);color:var(--teal);">src/ingestion.dataset_summary()</code> — not model output.</p>
       </div>
       <div class="chart-box">
@@ -753,32 +764,6 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
 </footer>
 
 <script>
-// ---- dataset split chart (real numbers) ----
-const ctx = document.getElementById('splitChart');
-if (ctx && window.Chart) {
-  new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Training (1,840)', 'Validation (460)'],
-      datasets: [{
-        data: [1840, 460],
-        backgroundColor: ['#FFA23C', '#3FD6B0'],
-        borderColor: '#171D26',
-        borderWidth: 3
-      }]
-    },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#8993A4', font: { family: 'IBM Plex Mono', size: 11 }, padding: 16 }
-        }
-      }
-    }
-  });
-}
-
 // ---- scroll reveal ----
 const revealEls = document.querySelectorAll('.reveal');
 const io = new IntersectionObserver((entries) => {
