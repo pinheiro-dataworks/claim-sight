@@ -10,7 +10,11 @@
 torch==2.6.0
 torchvision==0.21.0
 
-opencv-python==5.0.0.93
+# headless build: this project never uses cv2 GUI functions (imshow,
+# namedWindow, ...), and the full "opencv-python" build fails to import
+# on minimal cloud containers (Streamlit Cloud, slim Docker images, CI)
+# with a missing libGL.so.1 error. Headless avoids that dependency.
+opencv-python-headless==5.0.0.93
 albumentations==2.0.8
 numpy==2.4.4
 pandas==2.3.3
@@ -25,3 +29,4 @@ fastapi==0.141.1
 uvicorn[standard]==0.52.0
 python-multipart==0.0.32
 pydantic==2.13.4
+streamlit==1.60.0

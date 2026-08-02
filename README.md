@@ -150,7 +150,8 @@ claimsight/
 │   ├── test_preprocessing.py  # determinism + shape contract (12 tests)
 │   └── test_api.py            # API contract (6 tests)
 ├── web/index.html            # portfolio landing page (this project's marketing site)
-├── Dockerfile                # free deployment on Hugging Face Spaces
+├── streamlit_app.py          # live interactive demo (Streamlit Community Cloud, free)
+├── Dockerfile                # containerized FastAPI service, for any container host
 ├── requirements.txt          # pinned runtime dependencies
 └── requirements-dev.txt      # + testing/notebook tooling
 ```
@@ -342,17 +343,32 @@ payment method is required anywhere in this stack:
 |---|---|---|
 | Code + this README | [GitHub](https://github.com/pinheiro-dataworks/claim-sight) (public repo) | ✅ Live |
 | Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | Deploys automatically on push via `.github/workflows/pages.yml` — enable once in repo Settings → Pages → Source: "GitHub Actions" |
-| Trained model weights | Hugging Face Hub | Pending — see below |
-| Live API + interactive demo | Hugging Face Spaces (Docker SDK, CPU tier) | Pending — see below |
+| Trained model weights | [Hugging Face Hub](https://huggingface.co/PinheiroDataworks/claimsight-damage-detection) | ✅ Live — both checkpoints + model card |
+| Live interactive demo (`streamlit_app.py`) | Streamlit Community Cloud | Deploy at [share.streamlit.io](https://share.streamlit.io) — see below |
+| Served REST API (`app/main.py`, tested) | Run locally, or any container host | See below |
+
+> **Note on Hugging Face Spaces:** this project originally targeted a
+> Space (Docker SDK) for the live demo, but HF now requires a paid PRO
+> plan to run Docker/Gradio Spaces on the free CPU tier — a change made
+> after this project's initial design. To keep the "zero cost"
+> requirement, the live demo runs on **Streamlit Community Cloud**
+> instead (genuinely free, no card), reusing the exact same
+> `preprocess()` / `build_model()` / Grad-CAM code as the FastAPI app.
+> The `Dockerfile` and FastAPI service are still fully built and
+> tested — run them locally, or deploy them anywhere you do have free
+> or paid container capacity.
 
 ```bash
-# Publish the model (after: huggingface-cli login)
-python -m scripts.publish_hf --repo-id <your-hf-username>/claimsight-damage-detection
+# Already done: model published to
+# huggingface.co/PinheiroDataworks/claimsight-damage-detection
+# (python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection)
 
-# Then, on a Hugging Face Space (Docker SDK) with:
-#   CLAIMSIGHT_HF_REPO=<your-hf-username>/claimsight-damage-detection
-#   CLAIMSIGHT_ARCH=resnet50
-# the included Dockerfile builds and serves the API + demo UI directly.
+# Live demo: deploy streamlit_app.py at https://share.streamlit.io
+# (connect this GitHub repo, main file path: streamlit_app.py)
+# It downloads weights from the Hub at startup — no local checkpoint needed.
+
+# Tested REST API — run anywhere, including locally:
+uvicorn app.main:app --reload
 ```
 
 ## Business model
@@ -392,7 +408,8 @@ damage at all — time an adjuster never needs to spend.
 | Model serving (FastAPI, fully tested) | `app/main.py`, `tests/test_api.py` |
 | Reproducibility & pipeline engineering | pinned `requirements.txt`, fixed seeds, per-run metadata JSON |
 | MLOps / model publication | `scripts/publish_hf.py` + generated model card |
-| Free-tier containerized deployment | `Dockerfile` (Hugging Face Spaces) |
+| Containerized deployment | `Dockerfile` |
+| Free-tier live deployment across 3 platforms | GitHub Pages, Hugging Face Hub, Streamlit Community Cloud |
 
 ## License
 

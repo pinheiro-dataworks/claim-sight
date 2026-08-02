@@ -338,7 +338,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
     </nav>
     <div class="nav-cta">
       <a class="btn-ghost" href="https://github.com/pinheiro-dataworks/claim-sight" target="_blank" rel="noopener">GitHub ↗</a>
-      <a class="btn-ghost" href="https://huggingface.co/" target="_blank" rel="noopener">Model Card ↗</a>
+      <a class="btn-ghost" href="https://huggingface.co/PinheiroDataworks/claimsight-damage-detection" target="_blank" rel="noopener">Model Card ↗</a>
     </div>
     <button class="nav-toggle" aria-label="Menu">☰</button>
   </div>
@@ -587,7 +587,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
     <div class="section-head reveal">
       <div class="eyebrow">07 · SERVING</div>
       <h2>A minimal, explicit API contract</h2>
-      <p>Served with FastAPI + uvicorn, deployable for free on Hugging Face Spaces (Docker SDK). The model is also published to the Hugging Face Hub with a full model card documenting intended use and limitations.</p>
+      <p>Served with FastAPI + uvicorn, containerized via the included Dockerfile for any host. The live interactive demo runs on Streamlit Community Cloud; the model itself is published to the Hugging Face Hub with a full model card documenting intended use and limitations.</p>
     </div>
     <div class="grid-2 reveal">
       <div class="api-card">
@@ -687,7 +687,8 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
         <tr><td>Model serving (FastAPI, tested)</td><td><code>app/main.py</code>, <code>tests/test_api.py</code> (18/18 passing)</td></tr>
         <tr><td>Reproducibility &amp; pipeline engineering</td><td><code>requirements.txt</code> (pinned), fixed seeds, per-run metadata JSON</td></tr>
         <tr><td>Model publication (Hugging Face Hub)</td><td><code>scripts/publish_hf.py</code> + generated model card</td></tr>
-        <tr><td>Free-tier deployment (Docker, Hugging Face Spaces)</td><td><code>Dockerfile</code></td></tr>
+        <tr><td>Containerized deployment</td><td><code>Dockerfile</code></td></tr>
+        <tr><td>Free-tier live deployment (3 platforms)</td><td>GitHub Pages, Hugging Face Hub, <code>streamlit_app.py</code></td></tr>
       </table>
     </div>
   </div>
@@ -743,7 +744,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
       </div>
       <div class="footer-links">
         <a href="https://github.com/pinheiro-dataworks/claim-sight" target="_blank" rel="noopener">GitHub ↗</a>
-        <a href="https://huggingface.co/" target="_blank" rel="noopener">Hugging Face Hub ↗</a>
+        <a href="https://huggingface.co/PinheiroDataworks/claimsight-damage-detection" target="_blank" rel="noopener">Hugging Face Hub ↗</a>
         <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn ↗</a>
       </div>
     </div>

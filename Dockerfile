@@ -1,14 +1,22 @@
-# ClaimSight API — deployable for free on Hugging Face Spaces (Docker SDK)
-# or any container host. CPU-only by default (Spaces' free tier has no GPU).
+# ClaimSight API — containerized FastAPI service. CPU-only by default.
+#
+# Note: Hugging Face Spaces' Docker/Gradio SDKs now require a paid PRO
+# plan on the free CPU tier (they didn't when this was written), so the
+# live public demo is deployed on Streamlit Community Cloud instead
+# (streamlit_app.py) — free, no card required. This Dockerfile still
+# builds and runs the exact same tested API; use it on any container
+# host you have free/paid capacity on (Cloud Run, Fly.io, your own
+# infra, or an HF Space if you have PRO).
 #
 # The model checkpoint is NOT baked into this image — it is downloaded
 # from the Hugging Face Hub at container startup via CLAIMSIGHT_HF_REPO,
 # so the image stays small and the model can be updated without a rebuild.
 FROM python:3.11-slim
 
-# opencv needs libgl/libglib at runtime even in headless mode
+# opencv-python-headless (see requirements.txt) still wants libglib at
+# runtime on minimal base images, even without any GUI functions used.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /code
