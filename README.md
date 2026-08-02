@@ -19,7 +19,7 @@
   <a href="#explainability-grad-cam">Explainability</a> ·
   <a href="#api">API</a> ·
   <a href="#deployment-100-free">Deployment</a> ·
-  <a href="web/index.html">Landing page</a>
+  <a href="https://pinheiro-dataworks.github.io/claim-sight/">Live landing page ↗</a>
 </p>
 
 ---
@@ -338,27 +338,22 @@ pytest tests/ -v
 Every deployment target below has a permanently free tier and no
 payment method is required anywhere in this stack:
 
-| Component | Where | Cost |
+| Component | Where | Status |
 |---|---|---|
-| Code + this README | GitHub (public repo) | Free |
-| Landing page (`web/index.html`) | GitHub Pages | Free |
-| Trained model weights | Hugging Face Hub | Free |
-| Live API + interactive demo | Hugging Face Spaces (Docker SDK, CPU tier) | Free |
+| Code + this README | [GitHub](https://github.com/pinheiro-dataworks/claim-sight) (public repo) | ✅ Live |
+| Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | Deploys automatically on push via `.github/workflows/pages.yml` — enable once in repo Settings → Pages → Source: "GitHub Actions" |
+| Trained model weights | Hugging Face Hub | Pending — see below |
+| Live API + interactive demo | Hugging Face Spaces (Docker SDK, CPU tier) | Pending — see below |
 
 ```bash
 # Publish the model (after: huggingface-cli login)
-python -m scripts.publish_hf --repo-id <your-username>/claimsight-damage-detection
+python -m scripts.publish_hf --repo-id <your-hf-username>/claimsight-damage-detection
 
 # Then, on a Hugging Face Space (Docker SDK) with:
-#   CLAIMSIGHT_HF_REPO=<your-username>/claimsight-damage-detection
+#   CLAIMSIGHT_HF_REPO=<your-hf-username>/claimsight-damage-detection
 #   CLAIMSIGHT_ARCH=resnet50
 # the included Dockerfile builds and serves the API + demo UI directly.
 ```
-
-> **Status:** code, tests, and both trained checkpoints are ready to
-> publish. Hugging Face Hub/Spaces publication and the GitHub push are
-> the two remaining manual steps — see the Dockerfile and
-> `scripts/publish_hf.py` for exact commands.
 
 ## Business model
 
