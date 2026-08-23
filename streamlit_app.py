@@ -101,10 +101,23 @@ st.caption(
 
 uploaded = st.file_uploader("Upload a vehicle photo (JPEG or PNG)", type=["jpg", "jpeg", "png"])
 
+st.caption("No photo handy? Try a real validation example instead:")
+ex_col1, ex_col2 = st.columns(2)
+if ex_col1.button("🚗 Damaged example", use_container_width=True):
+    st.session_state["sample_path"] = "samples/damage_example.jpg"
+if ex_col2.button("🚙 Intact example", use_container_width=True):
+    st.session_state["sample_path"] = "samples/whole_example.jpg"
+
+has_input = uploaded is not None or bool(st.session_state.get("sample_path"))
+image_bgr = None
 if uploaded is not None:
+    st.session_state.pop("sample_path", None)  # an explicit upload overrides a prior example click
     file_bytes = np.frombuffer(uploaded.read(), dtype=np.uint8)
     image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+elif st.session_state.get("sample_path"):
+    image_bgr = cv2.imread(st.session_state["sample_path"])
 
+if has_input:
     if image_bgr is None:
         st.error("Could not decode this file as an image. Please upload a JPEG or PNG.")
     else:
