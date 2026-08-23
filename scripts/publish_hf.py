@@ -21,7 +21,15 @@ from pathlib import Path
 from huggingface_hub import HfApi, create_repo
 
 
-def build_model_card(arch: str, metrics: dict, meta: dict, other_arch: str | None, other_metrics: dict | None) -> str:
+def build_model_card(
+    arch: str,
+    metrics: dict,
+    meta: dict,
+    other_arch: str | None,
+    other_metrics: dict | None,
+    repo_id: str,
+    github_repo: str,
+) -> str:
     cm = metrics["default_threshold"]["confusion_matrix"]
     acc = metrics["default_threshold"]["accuracy"]
     auc = metrics["default_threshold"]["roc_auc"]
@@ -55,7 +63,7 @@ built as a **claims-triage decision-support tool** — not an autonomous
 adjuster. Every flagged prediction is intended to route to a human
 reviewer.
 
-Full project, training code, and API: https://github.com/<your-username>/claimsight
+Full project, training code, and API: https://github.com/{github_repo}
 
 ## Intended use
 
@@ -71,13 +79,13 @@ Full project, training code, and API: https://github.com/<your-username>/claimsi
 import torch
 from huggingface_hub import hf_hub_download
 
-# clone github.com/<your-username>/claimsight for src/model.py, src/preprocessing.py
+# clone github.com/{github_repo} for src/model.py, src/preprocessing.py
 from src.model import build_model
 from src.preprocessing import preprocess
 from src.dataset import eval_transform
 
 checkpoint_path = hf_hub_download(
-    repo_id="<your-username>/claimsight-damage-detection",
+    repo_id="{repo_id}",
     filename="best_{arch}.pt",
 )
 model = build_model("{arch}", pretrained=False)
@@ -166,6 +174,7 @@ def publish(
     also_publish_other: bool = True,
     models_dir: Path = Path("models"),
     metrics_dir: Path = Path("outputs/metrics"),
+    github_repo: str = "pinheiro-dataworks/claim-sight",
 ) -> None:
     checkpoint_path = models_dir / f"best_{arch}.pt"
     meta_path = models_dir / f"best_{arch}.meta.json"
@@ -197,7 +206,10 @@ def publish(
         repo_id=repo_id,
     )
 
-    card = build_model_card(arch, metrics, meta, other_arch if also_publish_other else None, other_metrics)
+    card = build_model_card(
+        arch, metrics, meta, other_arch if also_publish_other else None, other_metrics,
+        repo_id=repo_id, github_repo=github_repo,
+    )
     api.upload_file(
         path_or_fileobj=card.encode("utf-8"),
         path_in_repo="README.md",
@@ -226,6 +238,10 @@ if __name__ == "__main__":
     parser.add_argument("--repo-id", required=True, help="e.g. your-username/claimsight-damage-detection")
     parser.add_argument("--arch", choices=["resnet50", "efficientnet_b0"], default="resnet50")
     parser.add_argument("--no-other-arch", action="store_true", help="Skip publishing the second architecture too.")
+    parser.add_argument(
+        "--github-repo", default="pinheiro-dataworks/claim-sight",
+        help="owner/repo for the model card's 'full project' link (default: this project's own repo).",
+    )
     args = parser.parse_args()
 
-    publish(args.repo_id, args.arch, also_publish_other=not args.no_other_arch)
+    publish(args.repo_id, args.arch, also_publish_other=not args.no_other_arch, github_repo=args.github_repo)
