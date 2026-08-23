@@ -101,12 +101,15 @@ st.caption(
 
 uploaded = st.file_uploader("Upload a vehicle photo (JPEG or PNG)", type=["jpg", "jpeg", "png"])
 
-st.caption("No photo handy? Try a real validation example instead:")
+st.caption("Showing a real validation example below — switch it, or upload your own photo above:")
 ex_col1, ex_col2 = st.columns(2)
 if ex_col1.button("🚗 Damaged example", use_container_width=True):
     st.session_state["sample_path"] = "samples/damage_example.jpg"
 if ex_col2.button("🚙 Intact example", use_container_width=True):
     st.session_state["sample_path"] = "samples/whole_example.jpg"
+
+if uploaded is None and "sample_path" not in st.session_state:
+    st.session_state["sample_path"] = "samples/damage_example.jpg"  # default view on first load
 
 has_input = uploaded is not None or bool(st.session_state.get("sample_path"))
 image_bgr = None
