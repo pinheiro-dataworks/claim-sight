@@ -15,9 +15,14 @@ FROM python:3.11-slim
 
 # opencv-python-headless (see requirements.txt) still wants libglib at
 # runtime on minimal base images, even without any GUI functions used.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# Package name depends on the base image's Debian release: newer ones
+# (trixie+) renamed it to the "t64" (64-bit time_t) variant and only
+# keep a broken transitional stub under the old name — try the new
+# name first, fall back to the old one for older bases.
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends libglib2.0-0t64 \
+     || apt-get install -y --no-install-recommends libglib2.0-0) && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /code
 
