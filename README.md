@@ -19,7 +19,8 @@
   <a href="#explainability-grad-cam">Explainability</a> ·
   <a href="#api">API</a> ·
   <a href="#deployment-100-free">Deployment</a> ·
-  <a href="https://pinheiro-dataworks.github.io/claim-sight/">Live landing page ↗</a>
+  <a href="https://pinheiro-dataworks.github.io/claim-sight/">Live landing page ↗</a> ·
+  <a href="https://claim-sight-renands.streamlit.app/">Live demo ↗</a>
 </p>
 
 ---
@@ -150,7 +151,7 @@ claimsight/
 │   ├── test_preprocessing.py  # determinism + shape contract (12 tests)
 │   └── test_api.py            # API contract (6 tests)
 ├── web/index.html            # portfolio landing page (this project's marketing site)
-├── streamlit_app.py          # interactive demo UI — run locally: streamlit run streamlit_app.py
+├── streamlit_app.py          # live demo: https://claim-sight-renands.streamlit.app/
 ├── Dockerfile                # containerized FastAPI service, for any container host
 ├── requirements.txt          # pinned runtime dependencies
 └── requirements-dev.txt      # + testing/notebook tooling
@@ -344,26 +345,33 @@ payment method is required anywhere in this stack:
 | Code + this README | [GitHub](https://github.com/pinheiro-dataworks/claim-sight) (public repo) | ✅ Live |
 | Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | ✅ Live — deploys automatically on push via `.github/workflows/pages.yml` |
 | Trained model weights | [Hugging Face Hub](https://huggingface.co/PinheiroDataworks/claimsight-damage-detection) | ✅ Live — both checkpoints + model card |
-| Interactive demo UI (`streamlit_app.py`) | Run locally | Built and tested; not hosted publicly (see note) |
+| Interactive demo (`streamlit_app.py`) | [Streamlit Community Cloud](https://claim-sight-renands.streamlit.app/) | ✅ Live |
 | Served REST API (`app/main.py`, tested) | Run locally, or any container host | Built and tested (18/18); not hosted publicly |
 
-> **Note on the live demo:** this project originally targeted a free
-> Hugging Face Space (Docker SDK), but HF now requires a paid PRO plan
-> to run Docker/Gradio Spaces on the free CPU tier — a change made
-> after this project's initial design. Streamlit Community Cloud was
-> the free fallback, but its build environment ran into unresolved
-> dependency-install failures specific to that platform. Rather than
-> spend paid compute chasing a platform-specific issue, both the
-> Streamlit demo and the FastAPI service are fully built, tested, and
-> documented to run locally or on any container host — the "zero cost"
-> requirement stays intact; the live-hosting piece is the one part
-> deliberately left as a local run rather than forced onto a paid tier.
+> **Note on the live demo's path here:** this project originally
+> targeted a free Hugging Face Space (Docker SDK), but HF now requires
+> a paid PRO plan to run Docker/Gradio Spaces on the free CPU tier — a
+> change made after this project's initial design. Streamlit Community
+> Cloud was the free fallback, which needed three platform-specific
+> fixes to actually build: (1) pinning `torch`/`torchvision` to their
+> explicit `+cpu` wheels — the bare version resolves to a multi-GB
+> CUDA build that blows the free build container's budget; (2) forcing
+> Python 3.11 via the app's settings, since 3.14 (the platform default
+> at the time) predates `torch`/`opencv-python-headless` wheel support
+> entirely; (3) a `packages.txt` installing `libglib2.0-0t64` — the
+> container's Debian release renamed this library in its 64-bit
+> `time_t` transition, and the old name resolves to a broken
+> transitional package. The FastAPI service hits the same zero-cost
+> ceiling (no free host runs Docker without a paid plan) and stays a
+> local-run tool instead.
 
 ```bash
 # Already live: model published to
 # huggingface.co/PinheiroDataworks/claimsight-damage-detection
+# Already live: interactive demo at
+# https://claim-sight-renands.streamlit.app/
 
-# Interactive demo — run locally, downloads weights from the Hub automatically:
+# Same demo, run locally — downloads weights from the Hub automatically:
 streamlit run streamlit_app.py
 
 # Tested REST API — run anywhere, including locally:
@@ -408,8 +416,8 @@ damage at all — time an adjuster never needs to spend.
 | Reproducibility & pipeline engineering | pinned `requirements.txt`, fixed seeds, per-run metadata JSON |
 | MLOps / model publication | `scripts/publish_hf.py` + generated model card |
 | Containerized deployment | `Dockerfile` |
-| Free-tier live deployment | GitHub Pages, Hugging Face Hub |
-| Interactive demo UI (runs locally) | `streamlit_app.py` |
+| Free-tier live deployment | GitHub Pages, Hugging Face Hub, Streamlit Community Cloud |
+| Cross-platform dependency debugging (Python ABI, CUDA wheel bloat, Debian package transitions) | `requirements.txt`, `packages.txt`, `.python-version` |
 
 ## License
 
