@@ -22,7 +22,6 @@ import torch
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
-    precision_recall_curve,
     roc_auc_score,
     roc_curve,
 )
@@ -204,7 +203,7 @@ def evaluate_architecture(
 
     summary = {
         "arch": str(arch),
-        "n_validation": int(len(val_ds)),
+        "n_validation": len(val_ds),
         "default_threshold": default_metrics,
         "threshold_table": threshold_table,
         "recall_priority_threshold": chosen,

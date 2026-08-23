@@ -1,0 +1,25 @@
+[tool.pytest.ini_options]
+markers = [
+    "integration: needs network access + downloads a real trained checkpoint from the Hugging Face Hub (slower, opt-in). Run with `pytest -m integration`; excluded by default via `-m \"not integration\"` in CI's fast job.",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+    "B008",     # FastAPI's `= File(...)` / `= Depends(...)` default-arg pattern is idiomatic, not a bug
+    "PLR0402",  # `import torch.nn as nn` is the standard PyTorch convention, not worth changing
+]
+
+[tool.coverage.report]
+# --cov scope (passed explicitly in CI, not duplicated here) is
+# deliberately limited to modules with dedicated unit tests
+# (preprocessing, dataset, model, the FastAPI app) — src/train.py,
+# evaluate.py, explain.py, ingestion.py, and scripts/ are one-shot
+# orchestration scripts validated by actually running them during
+# development (their real outputs are committed under outputs/), not
+# unit-tested line by line.
+fail_under = 80
+show_missing = true

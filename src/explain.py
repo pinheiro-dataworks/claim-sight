@@ -142,7 +142,7 @@ def save_individual_overlays(model, arch: str, buckets: dict[str, list[Path]], d
         out_dir = GRADCAM_DIR / arch / outcome
         out_dir.mkdir(parents=True, exist_ok=True)
         for path in paths[:n_per_bucket]:
-            overlay, pred, conf = generate_overlay(model, arch, path, device)
+            overlay, _pred, _conf = generate_overlay(model, arch, path, device)
             out_path = out_dir / f"{path.stem}_gradcam.png"
             plt.imsave(out_path, overlay)
             saved[outcome].append(str(out_path))

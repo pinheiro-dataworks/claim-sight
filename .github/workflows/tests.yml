@@ -18,5 +18,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      - name: Run tests
-        run: pytest tests/ -v
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      # Always runs, checkpoint or not: tests/test_api.py injects an
+      # untrained model of the right architecture when no trained
+      # checkpoint is present (it never is here — models/*.pt is
+      # gitignored), so the real API/Grad-CAM code paths still execute
+      # instead of silently skipping to a green build.
+      - name: Unit + contract tests (coverage-gated)
+        run: >
+          pytest tests/ -v -m "not integration"
+          --cov=src.preprocessing --cov=src.dataset --cov=src.model --cov=app.main --cov=app.schemas
+          --cov-report=term-missing --cov-fail-under=80
+
+      # Separate, opt-in tier: downloads the real published checkpoint
+      # from the Hugging Face Hub and verifies actual trained behavior
+      # (not just response shape) — see tests/test_integration.py.
+      - name: Integration tests (real checkpoint from Hugging Face Hub)
+        run: pytest tests/test_integration.py -v

@@ -1,33 +1,36 @@
 """API contract tests — health check, valid prediction, and the two
 documented error paths (bad content-type, corrupted bytes).
 
-Requires a trained checkpoint at models/best_<CLAIMSIGHT_ARCH>.pt
-(defaults to resnet50). Run `python -m src.train` first if this file
-is skipped/failing with a 503.
+These always run, with or without a trained checkpoint present: if
+models/best_<CLAIMSIGHT_ARCH>.pt doesn't exist (e.g. a fresh CI
+checkout — that file is gitignored and published to the Hugging Face
+Hub instead), the `client` fixture injects a freshly-built, untrained
+model of the same architecture. Predictions are then meaningless, but
+every line of real code — request validation, preprocessing, the
+Grad-CAM hook mechanics, response schema — still runs for real. These
+are contract tests, not accuracy tests; see test_integration.py for
+tests that verify the actual trained model's behavior.
 """
 import io
 import os
-from pathlib import Path
 
-import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 _ARCH = os.environ.get("CLAIMSIGHT_ARCH", "resnet50")
-_CHECKPOINT = Path(f"models/best_{_ARCH}.pt")
-
-pytestmark = pytest.mark.skipif(
-    not _CHECKPOINT.exists(),
-    reason=f"No trained checkpoint at {_CHECKPOINT} — run `python -m src.train` first.",
-)
 
 
 @pytest.fixture(scope="module")
 def client():
-    from app.main import app
+    import app.main as main_module
 
-    with TestClient(app) as c:
+    if main_module.model is None:
+        from src.model import build_model
+
+        main_module.model = build_model(_ARCH, pretrained=False).to(main_module.device).eval()
+
+    with TestClient(main_module.app) as c:
         yield c
 
 

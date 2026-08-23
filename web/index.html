@@ -361,7 +361,7 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
       </div>
       <div class="build-status">
         <span class="dot"></span>
-        BUILD STATUS: training complete · ResNet50 selected (94.3% val. accuracy · ROC-AUC 0.986) · live demo up · API tested (18/18), run locally
+        BUILD STATUS: training complete · ResNet50 selected (94.3% val. accuracy · ROC-AUC 0.986) · live demo up · API tested (34, 93% coverage), run locally
       </div>
       <div class="chip-strip">
         <div class="chip"><span class="swatch" style="background:var(--amber)"></span>class: <b>00-damage</b> · confidence: 0.89</div>
@@ -695,7 +695,8 @@ footer{padding:60px 0 44px;border-top:1px solid var(--line-soft);}
         <tr><td>Data augmentation (Albumentations)</td><td><code>src/dataset.py</code></td></tr>
         <tr><td>Business-oriented evaluation &amp; threshold tuning</td><td><code>src/evaluate.py</code>, <code>outputs/metrics/</code></td></tr>
         <tr><td>Explainability (Grad-CAM)</td><td><code>src/explain.py</code>, <code>outputs/gradcam/</code></td></tr>
-        <tr><td>Model serving (FastAPI, tested)</td><td><code>app/main.py</code>, <code>tests/test_api.py</code> (18/18 passing)</td></tr>
+        <tr><td>Model serving (FastAPI, tested)</td><td><code>app/main.py</code>, <code>tests/test_api.py</code> (34 tests, 93% coverage)</td></tr>
+        <tr><td>CI rigor: unit/integration split, coverage gate, linting</td><td><code>tests/test_integration.py</code>, <code>pyproject.toml</code>, <code>.github/workflows/tests.yml</code></td></tr>
         <tr><td>Reproducibility &amp; pipeline engineering</td><td><code>requirements.txt</code> (pinned), fixed seeds, per-run metadata JSON</td></tr>
         <tr><td>Model publication (Hugging Face Hub)</td><td><code>scripts/publish_hf.py</code> + generated model card</td></tr>
         <tr><td>Containerized deployment</td><td><code>Dockerfile</code></td></tr>

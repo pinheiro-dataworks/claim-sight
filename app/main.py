@@ -20,7 +20,6 @@ binary committed to git.
 from __future__ import annotations
 
 import base64
-import io
 import os
 from pathlib import Path
 
@@ -171,7 +170,7 @@ async def predict_with_gradcam(file: UploadFile = File(...)):
     grayscale_cam = cam(input_tensor=tensor, targets=[ClassifierOutputTarget(pred_idx)])[0]
     overlay = show_cam_on_image(rgb_float, grayscale_cam, use_rgb=True)
 
-    ok, buf = cv2.imencode(".png", cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
+    _, buf = cv2.imencode(".png", cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
     overlay_b64 = base64.b64encode(buf.tobytes()).decode("ascii")
 
     return GradCamPredictionResponse(
