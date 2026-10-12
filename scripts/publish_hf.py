@@ -6,7 +6,9 @@ handles credentials directly):
     1. Create a free account at https://huggingface.co
     2. Create a write-scoped access token at
        https://huggingface.co/settings/tokens
-    3. Authenticate this machine:  huggingface-cli login
+    3. Authenticate this machine:  hf auth login
+       (or export HF_TOKEN for a single session; huggingface-cli is
+       deprecated in huggingface_hub 1.x)
 
 Usage:
     python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection
