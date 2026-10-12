@@ -9,8 +9,15 @@ handles credentials directly):
     3. Authenticate this machine:  huggingface-cli login
 
 Usage:
-    python -m scripts.publish_hf --repo-id <your-username>/claimsight-damage-detection
-    python -m scripts.publish_hf --repo-id <your-username>/claimsight-damage-detection --arch efficientnet_b0
+    python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection
+    python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection --arch efficientnet_b0
+
+    # Render the model card to MODEL_CARD.md only (no upload, no credentials):
+    python -m scripts.publish_hf --repo-id PinheiroDataworks/claimsight-damage-detection --card-only
+
+The card embeds reports/model_comparison.json and
+reports/confidence_intervals.json when present, so the published
+numbers always match the versioned evaluation artifacts.
 """
 from __future__ import annotations
 
@@ -19,6 +26,84 @@ import json
 from pathlib import Path
 
 from huggingface_hub import HfApi, create_repo
+
+MODEL_NAMES = {
+    "resnet50": "ResNet50",
+    "efficientnet_b0": "EfficientNet-B0",
+    "hist_gb": "HistGradientBoosting (HSV + HOG + Canny)",
+    "logreg": "Logistic regression (HSV + HOG + Canny)",
+}
+
+
+def _ci(intervals: dict | None, model: str, metric: str, pct: bool) -> str:
+    """Format a '[lower, upper]' interval cell, or an em dash if unavailable."""
+    ci = (intervals or {}).get("models", {}).get(model, {}).get(metric)
+    if ci is None:
+        return "—"
+    if pct:
+        return f"[{100 * ci['lower']:.2f}%, {100 * ci['upper']:.2f}%]"
+    return f"[{ci['lower']:.4f}, {ci['upper']:.4f}]"
+
+
+def _evaluation_table(arch: str, metrics: dict, intervals: dict | None) -> str:
+    default = metrics["default_threshold"]
+    damage = default["classification_report"]["00-damage"]
+    cm = default["confusion_matrix"]
+    at_025 = next(r for r in metrics["threshold_table"] if abs(r["threshold"] - 0.25) < 1e-9)
+    rows = [
+        ("Accuracy (@ threshold 0.5)", f"{100 * default['accuracy']:.2f}%", _ci(intervals, arch, "accuracy@0.5", True)),
+        ("ROC-AUC (damage class)", f"{default['roc_auc']:.4f}", _ci(intervals, arch, "roc_auc", False)),
+        ("Recall — damage (@ 0.5)", f"{100 * damage['recall']:.2f}%", _ci(intervals, arch, "recall@0.5", True)),
+        ("Recall — damage (@ 0.25)", f"{100 * at_025['recall_damage']:.2f}%", _ci(intervals, arch, "recall@0.25", True)),
+        ("Precision — damage (@ 0.5)", f"{100 * damage['precision']:.2f}%", "—"),
+        ("Confusion matrix @ 0.5 (TN/FP/FN/TP)", f"{cm['tn']}/{cm['fp']}/{cm['fn']}/{cm['tp']}", "—"),
+    ]
+    lines = ["| Metric | Value | 95% CI |", "|---|---|---|"]
+    lines += [f"| {name} | {value} | {ci} |" for name, value, ci in rows]
+    if intervals:
+        lines += ["", (
+            f"95% intervals: percentile bootstrap, {intervals['n_resamples']:,} resamples of the "
+            f"{intervals['n_images']} validation images, seed {intervals['seed']}."
+        )]
+    return "\n".join(lines)
+
+
+def _baseline_section(arch: str, comparison: dict | None, intervals: dict | None, github_repo: str) -> str:
+    if not comparison:
+        return ""
+    lines = [
+        "## Baseline comparison",
+        "",
+        "Same training/validation split for every model. The classical baselines use hand-crafted",
+        "features (HSV histogram, HOG, Canny/Sobel edge statistics) computed after the same",
+        "`preprocess()` the CNNs consume.",
+        "",
+        "| Model | Accuracy @0.5 | ROC-AUC [95% CI] | Recall @0.5 | Recall @0.25 |",
+        "|---|---|---|---|---|",
+    ]
+    for key, m in comparison["models"].items():
+        name = f"**{MODEL_NAMES[key]}** (this checkpoint)" if key == arch else MODEL_NAMES[key]
+        half, quarter = m["operating_points"]["0.5"], m["operating_points"]["0.25"]
+        lines.append(
+            f"| {name} | {100 * half['accuracy']:.2f}% | {m['roc_auc']:.4f} {_ci(intervals, key, 'roc_auc', False)} "
+            f"| {100 * half['recall_damage']:.2f}% | {100 * quarter['recall_damage']:.2f}% |"
+        )
+    diffs = (intervals or {}).get("paired_differences", {})
+    best = max((k for k in comparison["models"] if k in ("hist_gb", "logreg")),
+               key=lambda k: comparison["models"][k]["roc_auc"], default=None)
+    pair = diffs.get(f"{arch}-{best}") if best else None
+    if pair:
+        d = pair["roc_auc"]
+        lines += ["", (
+            f"Paired bootstrap difference in ROC-AUC, {MODEL_NAMES[arch]} minus {MODEL_NAMES[best]}: "
+            f"{d['point']:+.4f} (95% CI {d['lower']:+.4f} to {d['upper']:+.4f})."
+        )]
+    lines += ["", (
+        "Caveat: the dataset has no separate test split. The CNNs used the validation loss for early "
+        "stopping and checkpoint selection, so their numbers are slightly optimistic relative to the "
+        f"baselines. Methodology and interpretation: https://github.com/{github_repo}/tree/main/reports"
+    ), ""]
+    return "\n".join(lines)
 
 
 def build_model_card(
@@ -29,8 +114,9 @@ def build_model_card(
     other_metrics: dict | None,
     repo_id: str,
     github_repo: str,
+    comparison: dict | None = None,
+    intervals: dict | None = None,
 ) -> str:
-    cm = metrics["default_threshold"]["confusion_matrix"]
     acc = metrics["default_threshold"]["accuracy"]
     auc = metrics["default_threshold"]["roc_auc"]
     recall = metrics["default_threshold"]["classification_report"]["00-damage"]["recall"]
@@ -42,6 +128,14 @@ def build_model_card(
         o_acc = other_metrics["default_threshold"]["accuracy"]
         o_auc = other_metrics["default_threshold"]["roc_auc"]
         comparison_row = f"| {other_arch} | {o_acc:.4f} | {o_auc:.4f} |\n"
+
+    # With the full comparison report available, the richer baseline table
+    # (which already includes both CNNs) replaces the two-row architecture table.
+    baseline_section = _baseline_section(arch, comparison, intervals, github_repo)
+    architecture_table = "" if baseline_section else (
+        "| Architecture | Val. accuracy | ROC-AUC |\n|---|---|---|\n"
+        f"| **{arch}** (this checkpoint) | {acc:.4f} | {auc:.4f} |\n{comparison_row}"
+    )
 
     return f"""---
 license: mit
@@ -116,13 +210,7 @@ notes: see the project README.
 
 ## Evaluation (real, on the held-out validation split)
 
-| Metric | Value |
-|---|---|
-| Validation accuracy | {acc:.4f} |
-| ROC-AUC (damage class) | {auc:.4f} |
-| Recall — damage class (@ threshold 0.5) | {recall:.4f} |
-| Precision — damage class (@ threshold 0.5) | {precision:.4f} |
-| Confusion matrix (TN/FP/FN/TP) | {cm['tn']}/{cm['fp']}/{cm['fn']}/{cm['tp']} |
+{_evaluation_table(arch, metrics, intervals)}
 
 Recall on the `damage` class is the priority metric: a false negative
 (damaged vehicle classified as intact) can wrongly close a legitimate
@@ -132,11 +220,8 @@ threshold: at threshold **{tuned['threshold']:.2f}**, damage recall is
 **{tuned['recall_damage']:.4f}** at precision **{tuned['precision_damage']:.4f}**
 (vs. {recall:.4f} recall / {precision:.4f} precision at the default 0.5).
 
-| Architecture | Val. accuracy | ROC-AUC |
-|---|---|---|
-| **{arch}** (this checkpoint) | {acc:.4f} | {auc:.4f} |
-{comparison_row}
-
+{architecture_table}
+{baseline_section}
 ## Explainability
 
 Grad-CAM (`pytorch-grad-cam`) on the last convolutional layer is used
@@ -154,8 +239,13 @@ check.
 - Modest dataset size (2,300 images, one source) — real domain-shift
   risk against a real insurer's photo distribution (different brands,
   angles, lighting, phone cameras).
+- Observed false positives on reflective, studio-lit dealership photos.
+- No independent test split: reported metrics come from the validation
+  split that was also used for early stopping.
 - Not validated as a repair-cost estimator — triage signal only.
 - Requires human review in every deployment path.
+
+Tracked limitations and planned work: https://github.com/{github_repo}/issues
 
 ## Reproducibility
 
@@ -168,6 +258,40 @@ pinned `requirements.txt`. Metadata for this exact run:
 """
 
 
+def _read_json(path: Path) -> dict | None:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
+def render_card(
+    repo_id: str,
+    arch: str,
+    also_publish_other: bool = True,
+    models_dir: Path = Path("models"),
+    metrics_dir: Path = Path("outputs/metrics"),
+    reports_dir: Path = Path("reports"),
+    github_repo: str = "pinheiro-dataworks/claim-sight",
+) -> str:
+    """Build the model card from versioned artifacts only (no checkpoint, no network)."""
+    meta_path = models_dir / f"best_{arch}.meta.json"
+    metrics_path = metrics_dir / f"metrics_{arch}.json"
+    for p in (meta_path, metrics_path):
+        if not p.exists():
+            raise FileNotFoundError(f"Missing {p} — train and evaluate {arch} first.")
+
+    other_arch = "efficientnet_b0" if arch == "resnet50" else "resnet50"
+    return build_model_card(
+        arch,
+        _read_json(metrics_path),
+        _read_json(meta_path),
+        other_arch if also_publish_other else None,
+        _read_json(metrics_dir / f"metrics_{other_arch}.json"),
+        repo_id=repo_id,
+        github_repo=github_repo,
+        comparison=_read_json(reports_dir / "model_comparison.json"),
+        intervals=_read_json(reports_dir / "confidence_intervals.json"),
+    )
+
+
 def publish(
     repo_id: str,
     arch: str,
@@ -178,18 +302,14 @@ def publish(
 ) -> None:
     checkpoint_path = models_dir / f"best_{arch}.pt"
     meta_path = models_dir / f"best_{arch}.meta.json"
-    metrics_path = metrics_dir / f"metrics_{arch}.json"
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"Missing {checkpoint_path} — train {arch} first.")
 
-    for p in (checkpoint_path, meta_path, metrics_path):
-        if not p.exists():
-            raise FileNotFoundError(f"Missing {p} — train and evaluate {arch} first.")
-
-    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
-
+    metrics = _read_json(metrics_dir / f"metrics_{arch}.json")
+    card = render_card(
+        repo_id, arch, also_publish_other, models_dir, metrics_dir, github_repo=github_repo,
+    )
     other_arch = "efficientnet_b0" if arch == "resnet50" else "resnet50"
-    other_metrics_path = metrics_dir / f"metrics_{other_arch}.json"
-    other_metrics = json.loads(other_metrics_path.read_text(encoding="utf-8")) if other_metrics_path.exists() else None
 
     create_repo(repo_id, exist_ok=True)
     api = HfApi()
@@ -206,10 +326,6 @@ def publish(
         repo_id=repo_id,
     )
 
-    card = build_model_card(
-        arch, metrics, meta, other_arch if also_publish_other else None, other_metrics,
-        repo_id=repo_id, github_repo=github_repo,
-    )
     api.upload_file(
         path_or_fileobj=card.encode("utf-8"),
         path_in_repo="README.md",
@@ -235,13 +351,25 @@ def publish(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Publish a ClaimSight checkpoint to the Hugging Face Hub.")
-    parser.add_argument("--repo-id", required=True, help="e.g. your-username/claimsight-damage-detection")
+    parser.add_argument("--repo-id", required=True, help="e.g. PinheiroDataworks/claimsight-damage-detection")
     parser.add_argument("--arch", choices=["resnet50", "efficientnet_b0"], default="resnet50")
     parser.add_argument("--no-other-arch", action="store_true", help="Skip publishing the second architecture too.")
     parser.add_argument(
         "--github-repo", default="pinheiro-dataworks/claim-sight",
         help="owner/repo for the model card's 'full project' link (default: this project's own repo).",
     )
+    parser.add_argument(
+        "--card-only", action="store_true",
+        help="Write the model card to --card-path and exit; nothing is uploaded.",
+    )
+    parser.add_argument("--card-path", type=Path, default=Path("MODEL_CARD.md"))
     args = parser.parse_args()
 
-    publish(args.repo_id, args.arch, also_publish_other=not args.no_other_arch, github_repo=args.github_repo)
+    if args.card_only:
+        card = render_card(
+            args.repo_id, args.arch, also_publish_other=not args.no_other_arch, github_repo=args.github_repo,
+        )
+        args.card_path.write_text(card, encoding="utf-8", newline="")
+        print(f"Saved: {args.card_path}")
+    else:
+        publish(args.repo_id, args.arch, also_publish_other=not args.no_other_arch, github_repo=args.github_repo)
