@@ -16,7 +16,8 @@ ignore = [
 [tool.coverage.report]
 # --cov scope (passed explicitly in CI, not duplicated here) is
 # deliberately limited to modules with dedicated unit tests
-# (preprocessing, dataset, model, the FastAPI app) — src/train.py,
+# (preprocessing, dataset, model, predictions, baseline, compare_models,
+# the FastAPI app) — src/train.py,
 # evaluate.py, explain.py, ingestion.py, and scripts/ are one-shot
 # orchestration scripts validated by actually running them during
 # development (their real outputs are committed under outputs/), not
