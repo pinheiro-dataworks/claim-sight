@@ -10,14 +10,15 @@
   <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.6-EE4C2C?logo=pytorch&logoColor=white">
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-informational">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-34%20passing-brightgreen">
-  <img alt="Coverage" src="https://img.shields.io/badge/coverage-93%25-brightgreen">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-76%20passing-brightgreen">
+  <img alt="Coverage" src="https://img.shields.io/badge/coverage-91%25-brightgreen">
   <img alt="Ruff" src="https://img.shields.io/badge/lint-ruff-261230">
 </p>
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> ·
   <a href="#results-real-validation-metrics">Results</a> ·
+  <a href="#baseline-comparison">Baseline comparison</a> ·
   <a href="#explainability-grad-cam">Explainability</a> ·
   <a href="#api">API</a> ·
   <a href="#deployment-100-free">Deployment</a> ·
@@ -40,11 +41,16 @@ Every flagged prediction is designed to route to a human reviewer — see
 
 | | |
 |---|---|
-| **Validation accuracy** | **94.35%** (ResNet50, 460 held-out images) |
-| **ROC-AUC (damage class)** | **0.986** |
-| **Recall / Precision (damage, @0.5)** | **95.7% / 93.2%** |
+| **Validation accuracy** | **94.35%** (95% CI 92.17–96.30%; ResNet50, 460 held-out images) |
+| **ROC-AUC (damage class)** | **0.986** (95% CI 0.975–0.994) |
+| **Recall / Precision (damage, @0.5)** | **95.7%** (95% CI 92.7–98.2%) / **93.2%** |
+| **Best non-deep-learning baseline** | 84.57% accuracy, ROC-AUC 0.924 (HSV + HOG + Canny features, gradient boosting) |
 | **Dataset** | 2,300 images, [Kaggle `anujms/car-damage-detection`](https://www.kaggle.com/datasets/anujms/car-damage-detection) |
-| **Tests** | 34 passing (31 unit/contract + 3 integration), 93% coverage, `ruff` clean — CI always exercises the real API, checkpoint or not |
+| **Tests** | 76 passing (73 unit/contract + 3 integration), 91% coverage, `ruff` clean — CI always exercises the real API, checkpoint or not |
+
+Confidence intervals are 95% percentile bootstrap intervals over the
+validation images (2,000 resamples, seed 42); see
+[Results](#results-real-validation-metrics).
 
 ---
 
@@ -56,14 +62,15 @@ Every flagged prediction is designed to route to a human reviewer — see
 4. [Dataset & EDA](#dataset--eda)
 5. [Methodology](#methodology)
 6. [Results (real validation metrics)](#results-real-validation-metrics)
-7. [Explainability (Grad-CAM)](#explainability-grad-cam)
-8. [API](#api)
-9. [Quickstart](#quickstart)
-10. [Deployment (100% free)](#deployment-100-free)
-11. [Business model](#business-model)
-12. [Limitations & roadmap](#limitations--roadmap)
-13. [Skill → evidence map](#skill--evidence-map)
-14. [License](#license)
+7. [Baseline comparison](#baseline-comparison)
+8. [Explainability (Grad-CAM)](#explainability-grad-cam)
+9. [API](#api)
+10. [Quickstart](#quickstart)
+11. [Deployment (100% free)](#deployment-100-free)
+12. [Business model](#business-model)
+13. [Limitations & roadmap](#limitations--roadmap)
+14. [Skill → evidence map](#skill--evidence-map)
+15. [License](#license)
 
 ---
 
@@ -139,27 +146,38 @@ claimsight/
 │   ├── model.py              # build_model() for ResNet50 / EfficientNet-B0
 │   ├── train.py              # two-phase training loop, early stopping
 │   ├── evaluate.py           # confusion matrix, ROC-AUC, threshold tuning
-│   └── explain.py            # Grad-CAM overlays + outcome bucketing
+│   ├── explain.py            # Grad-CAM overlays + outcome bucketing
+│   ├── predictions.py        # per-image validation predictions (CSV) for every model
+│   ├── baseline.py           # classical baseline: HSV + HOG + Canny features, LogReg / HistGB
+│   ├── compare_models.py     # side-by-side comparison of CNNs and baselines
+│   ├── bootstrap.py          # percentile + paired bootstrap confidence intervals
+│   └── confidence_intervals.py  # 95% CIs for every model → reports/
 ├── app/
 │   ├── main.py                # FastAPI: /health, /predict, /predict-with-gradcam, demo UI
 │   └── schemas.py             # Pydantic request/response models
 ├── models/                  # checkpoints (gitignored — published to HF Hub)
 ├── outputs/                 # real EDA figures, metrics JSON, Grad-CAM overlays
+├── reports/                 # model comparison, baseline analysis, confidence intervals
+│   └── predictions/          # versioned per-image validation predictions
 ├── notebooks/01_eda.ipynb    # executed EDA notebook (real dataset statistics)
 ├── scripts/
 │   ├── publish_hf.py          # versioned upload + generated model card
 │   └── plot_training_curves.py
 ├── tests/
-│   ├── test_preprocessing.py  # determinism + shape contract (12 tests)
+│   ├── test_preprocessing.py  # determinism + shape + letterbox contract (16 tests)
 │   ├── test_model.py          # architecture construction + metadata (9 tests)
 │   ├── test_dataset.py        # CarDamageDataset (4 tests)
 │   ├── test_api.py            # API contract, always runs (6 tests)
+│   ├── test_baseline.py       # feature extractor contract + end-to-end smoke run (12 tests)
+│   ├── test_bootstrap.py      # bootstrap shape, seed determinism, CI coverage (16 tests)
+│   ├── test_compare_models.py, test_confidence_intervals.py, test_predictions.py  # reports (10 tests)
 │   └── test_integration.py    # real HF Hub checkpoint, opt-in (3 tests)
 ├── web/index.html            # portfolio landing page (this project's marketing site)
 ├── streamlit_app.py          # live demo: https://claim-sight-renands.streamlit.app/
 ├── Dockerfile                # containerized FastAPI service, for any container host
+├── MODEL_CARD.md             # model card, generated by scripts/publish_hf.py --card-only
 ├── requirements.txt          # pinned runtime dependencies
-└── requirements-dev.txt      # + testing/notebook tooling
+└── requirements-dev.txt      # + testing/notebook/experiment tooling
 ```
 
 ## Dataset & EDA
@@ -214,13 +232,17 @@ next to every checkpoint (architecture, seed, epochs run, timestamp).
 
 Computed by `src/evaluate.py` on the 460-image held-out validation
 split. Raw JSON: [`outputs/metrics/metrics_resnet50.json`](outputs/metrics/metrics_resnet50.json).
+Intervals are 95% percentile bootstrap CIs (2,000 resamples of the
+validation images, seed 42) from
+[`reports/confidence_intervals.md`](reports/confidence_intervals.md).
 
-| Architecture | Val. accuracy | ROC-AUC (damage) |
+| Architecture | Val. accuracy [95% CI] | ROC-AUC (damage) [95% CI] |
 |---|---|---|
-| **ResNet50** (deployed) | **0.9435** | **0.9858** |
-| EfficientNet-B0 | 0.8870 | 0.9620 |
+| **ResNet50** (deployed) | **94.35%** [92.17, 96.30] | **0.9858** [0.9751, 0.9935] |
+| EfficientNet-B0 | 88.70% [85.87, 91.52] | 0.9620 [0.9469, 0.9761] |
 
-ResNet50 outperformed EfficientNet-B0 by ~5.6 accuracy points on this
+ResNet50 outperformed EfficientNet-B0 by 5.65 accuracy points (paired
+bootstrap 95% CI +3.04 to +8.48, so the gap is not sampling noise) on this
 dataset size — plausibly because with only 1,840 training images,
 ResNet50's more mature `IMAGENET1K_V2` transfer weights generalize
 faster than EfficientNet's compound-scaling advantage, which tends to
@@ -235,13 +257,18 @@ pay off at larger data/compute scale.
 | **Actual whole** | 214 (TN) | 16 (FP) |
 | **Actual damage** | 10 (FN) ⚑ | 220 (TP) |
 
-| Metric (damage class) | Value |
-|---|---|
-| Recall | 0.9565 |
-| Precision | 0.9322 |
-| F1 | 0.9442 |
-| ROC-AUC | 0.9858 |
-| Accuracy | 0.9435 |
+| Metric (damage class) | Value | 95% CI |
+|---|---|---|
+| Recall | 0.9565 | [0.9269, 0.9821] |
+| Precision | 0.9322 | — |
+| F1 | 0.9442 | — |
+| ROC-AUC | 0.9858 | [0.9751, 0.9935] |
+| Accuracy | 0.9435 | [0.9217, 0.9630] |
+| Recall @ threshold 0.25 | 0.9870 | [0.9700, 1.0000] |
+
+With 230 damaged cars in the validation split, one missed car moves
+recall by 0.43 points. That is why the recall interval spans more than 5
+points even though the point estimate looks precise.
 
 **Threshold tuning — the business trade-off, measured, not asserted:**
 lowering the decision threshold from 0.50 to **0.25** raises damage
@@ -255,6 +282,51 @@ negative can wrongly close a legitimate claim.
   <img src="outputs/figures/roc_curve_resnet50.png" width="380" alt="ROC curve">
   <img src="outputs/figures/threshold_tradeoff_resnet50.png" width="380" alt="Threshold trade-off">
 </p>
+
+**Evaluation caveat:** the dataset ships no separate test split, and the
+CNNs used the validation loss for early stopping and checkpoint
+selection. The numbers above are therefore slightly optimistic, and the
+bootstrap intervals cover evaluation sampling only, not training variance
+([#8](https://github.com/pinheiro-dataworks/claim-sight/issues/8)).
+
+## Baseline comparison
+
+How much does deep learning actually add? A classical baseline
+([`src/baseline.py`](src/baseline.py)) answers that on the same splits.
+It uses 1,879 hand-crafted features (HSV color histogram, HOG on
+grayscale, Canny/Sobel edge statistics) extracted from the output of the
+**same `preprocess()`** the CNNs use, so both model families see identical
+pixels. The models are a `StandardScaler` + L2 logistic regression and a
+`HistGradientBoostingClassifier`, with hyperparameters selected on the
+training split only.
+
+| Model | Accuracy @0.5 | ROC-AUC [95% CI] | Recall @0.5 [95% CI] | Recall @0.25 | FP @0.25 |
+|---|---|---|---|---|---|
+| **ResNet50** | **94.35%** | **0.9858** [0.9751, 0.9935] | **95.65%** [92.69, 98.21] | 98.70% | 23 |
+| EfficientNet-B0 | 88.70% | 0.9620 [0.9469, 0.9761] | 88.70% [84.28, 92.51] | 95.65% | 48 |
+| HistGradientBoosting (HSV + HOG + Canny) | 84.57% | 0.9240 [0.8999, 0.9457] | 81.74% [76.57, 86.70] | 94.35% | 74 |
+| Logistic regression (HSV + HOG + Canny) | 82.17% | 0.9097 [0.8832, 0.9333] | 78.70% [73.54, 84.05] | 96.96% | 105 |
+
+**What deep learning adds.** Hand-crafted features already reach 0.92
+ROC-AUC, so most of the ranking signal is visible to color, texture and
+edge statistics. ResNet50 adds +0.062 ROC-AUC over the best baseline
+(paired 95% CI +0.042 to +0.084) and cuts missed damage at threshold 0.5
+from 42 to 10 cars. The baselines reach CNN-level recall only by lowering
+the threshold, at a large cost in false alarms: logistic regression hits
+96.96% recall @0.25 but sends 105 intact cars to review, against 23 for
+ResNet50 at 98.70% recall.
+
+**When the baseline would be enough:** ordering a review queue where
+every claim is still reviewed by a person (ranking quality matters, not
+the threshold); environments without a deep-learning runtime; or as an
+independent drift and sanity monitor next to the CNN (the baseline is
+right on 17 of ResNet50's 26 errors). It is *not* a useful cascade first
+stage: it is confident (P ≤ 0.1 or ≥ 0.9) on only 46% of images, against
+80% for ResNet50.
+
+Full tables (confident-subset coverage, error overlap, paired differences
+for every model) and the reproduction commands are in
+[`reports/`](reports/README.md).
 
 ## Explainability (Grad-CAM)
 
@@ -322,8 +394,8 @@ python -m venv .venv
 # source .venv/bin/activate       # Linux/Mac
 pip install -r requirements-dev.txt
 
-# 2. Dataset — already included under data/raw/ in this repo's history;
-#    to re-download from scratch (requires ~/.kaggle/kaggle.json):
+# 2. Dataset — not versioned (data/raw/ is gitignored); download it
+#    with the Kaggle API (requires ~/.kaggle/kaggle.json):
 python -m src.ingestion
 
 # 3. Train (two phases, both architectures)
@@ -334,15 +406,23 @@ python -m src.train --arch efficientnet_b0
 python -m src.evaluate --arch resnet50 --min-recall 0.98
 python -m src.explain --arch resnet50
 
-# 5. Serve
+# 5. Baseline comparison + bootstrap confidence intervals (→ reports/)
+python -m src.predictions --arch all      # per-image CNN predictions
+python -m src.baseline                    # classical baselines
+python -m src.compare_models
+python -m src.confidence_intervals
+
+# 6. Serve
 uvicorn app.main:app --reload
 # → http://localhost:8000/  (interactive demo)
 # → http://localhost:8000/docs  (Swagger UI)
 
-# 6. Test
+# 7. Test
 ruff check .                                  # lint
 pytest tests/ -m "not integration" --cov=src.preprocessing --cov=src.dataset \
-  --cov=src.model --cov=app.main --cov=app.schemas --cov-fail-under=80  # fast unit/contract suite
+  --cov=src.model --cov=src.predictions --cov=src.baseline --cov=src.compare_models \
+  --cov=src.bootstrap --cov=src.confidence_intervals \
+  --cov=app.main --cov=app.schemas --cov-fail-under=85  # fast unit/contract suite
 pytest tests/test_integration.py -v           # slower: downloads the real checkpoint from HF Hub
 ```
 
@@ -355,7 +435,7 @@ mechanics) always run for real — they just produce meaningless predictions. Wh
 model actually behaves correctly is what `tests/test_integration.py` checks separately, by
 downloading the real published checkpoint from the Hugging Face Hub and asserting on known-good
 predictions. See `.github/workflows/tests.yml` for how CI runs both tiers plus `ruff` and a
-coverage gate (`--cov-fail-under=80`, scoped to the modules with dedicated unit tests).
+coverage gate (`--cov-fail-under=85`, scoped to the modules with dedicated unit tests).
 
 ## Deployment (100% free)
 
@@ -368,7 +448,7 @@ payment method is required anywhere in this stack:
 | Landing page (`web/index.html`) | [GitHub Pages](https://pinheiro-dataworks.github.io/claim-sight/) | ✅ Live — deploys automatically on push via `.github/workflows/pages.yml` |
 | Trained model weights | [Hugging Face Hub](https://huggingface.co/PinheiroDataworks/claimsight-damage-detection) | ✅ Live — both checkpoints + model card |
 | Interactive demo (`streamlit_app.py`) | [Streamlit Community Cloud](https://claim-sight-renands.streamlit.app/) | ✅ Live |
-| Served REST API (`app/main.py`, tested) | Run locally, or any container host | Built and tested (34 tests, CI-gated); not hosted publicly |
+| Served REST API (`app/main.py`, tested) | Run locally, or any container host | Built and tested (API contract suite, CI-gated); not hosted publicly |
 
 > **Note on the live demo's path here:** this project originally
 > targeted a free Hugging Face Space (Docker SDK), but HF now requires
@@ -412,11 +492,12 @@ damage at all — time an adjuster never needs to spend.
 
 ## Limitations & roadmap
 
-**Limitations** (documented, not hidden):
-- Binary output only — no severity or damaged-part classification.
-- Grad-CAM is weak localization; no IoU/Dice (no mask ground truth exists).
-- Modest, single-source dataset (2,300 images) — real domain-shift risk against an actual insurer's photo distribution.
-- Observed false positives on reflective/studio-lit dealership photos.
+**Limitations** (documented, not hidden — each one is tracked as an issue):
+- Binary output only — no severity or damaged-part classification ([#4](https://github.com/pinheiro-dataworks/claim-sight/issues/4)).
+- Grad-CAM is weak localization; no IoU/Dice (no mask ground truth exists) ([#5](https://github.com/pinheiro-dataworks/claim-sight/issues/5)).
+- Modest, single-source dataset (2,300 images) — real domain-shift risk against an actual insurer's photo distribution ([#6](https://github.com/pinheiro-dataworks/claim-sight/issues/6)).
+- Observed false positives on reflective/studio-lit dealership photos ([#7](https://github.com/pinheiro-dataworks/claim-sight/issues/7)).
+- No independent test split — the validation set also drives early stopping ([#8](https://github.com/pinheiro-dataworks/claim-sight/issues/8)).
 - Not validated as a repair-cost estimator — triage signal only.
 
 **Roadmap:**
@@ -433,11 +514,13 @@ damage at all — time an adjuster never needs to spend.
 | Deterministic pipeline / zero train-serve skew | `src/preprocessing.py` → `src/dataset.py` & `app/main.py`, tested in `tests/test_preprocessing.py` |
 | Data augmentation (Albumentations) | `src/dataset.py` |
 | Business-oriented evaluation & threshold tuning | `src/evaluate.py`, `outputs/metrics/` |
+| Classical CV baseline (HSV, HOG, Canny) with train/serve parity | `src/baseline.py`, `reports/README.md` |
+| Statistical uncertainty: bootstrap CIs, paired model comparison | `src/bootstrap.py`, `reports/confidence_intervals.md` |
 | Explainability (Grad-CAM) + shortcut-learning audit | `src/explain.py`, `outputs/gradcam/` |
 | Model serving (FastAPI, fully tested) | `app/main.py`, `tests/test_api.py` |
-| CI rigor: unit/integration split, coverage gate, linting | `tests/test_integration.py`, `pyproject.toml` (`--cov-fail-under=80`), `.github/workflows/tests.yml` (`ruff check`) |
+| CI rigor: unit/integration split, coverage gate, linting | `tests/test_integration.py`, `pyproject.toml` (`fail_under = 85`), `.github/workflows/tests.yml` (`ruff check`) |
 | Reproducibility & pipeline engineering | pinned `requirements.txt`, fixed seeds, per-run metadata JSON |
-| MLOps / model publication | `scripts/publish_hf.py` + generated model card |
+| MLOps / model publication | `scripts/publish_hf.py` + generated [`MODEL_CARD.md`](MODEL_CARD.md) |
 | Containerized deployment | `Dockerfile` |
 | Free-tier live deployment | GitHub Pages, Hugging Face Hub, Streamlit Community Cloud |
 | Cross-platform dependency debugging (Python ABI, CUDA wheel bloat, Debian package transitions) | `requirements.txt`, `packages.txt`, `.python-version` |
