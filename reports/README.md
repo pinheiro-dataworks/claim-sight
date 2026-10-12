@@ -10,6 +10,7 @@ the raw dataset.
 | `predictions/validation_<model>.csv` | `python -m src.predictions` (CNNs), `python -m src.baseline` (classical) | One row per validation image: relative path, true label, P(damage) |
 | `predictions/baseline_meta.json` | `python -m src.baseline` | Feature layout, fitted hyperparameters, fit times |
 | `model_comparison.{json,md}` | `python -m src.compare_models` | Accuracy, ROC-AUC, recall/precision @0.5 and @0.25, confident-subset coverage, error overlap |
+| `confidence_intervals.{json,md}` | `python -m src.confidence_intervals` | 95% bootstrap intervals per model and paired differences against ResNet50 |
 
 Reproduce from scratch (needs `data/raw/` and the checkpoints in `models/`):
 
@@ -18,6 +19,7 @@ pip install -r requirements-dev.txt
 python -m src.predictions --arch all
 python -m src.baseline
 python -m src.compare_models
+python -m src.confidence_intervals
 ```
 
 ## Classical baseline
@@ -50,13 +52,36 @@ tables. Headline numbers:
 | HistGradientBoosting (HSV + HOG + Canny) | 84.57% | 0.9240 | 81.74% | 94.35% | 74 |
 | Logistic regression (HSV + HOG + Canny) | 82.17% | 0.9097 | 78.70% | 96.96% | 105 |
 
+## Confidence intervals
+
+95% percentile bootstrap intervals: 2,000 resamples of the 460 validation
+images, seed 42, with the same resampled index sets shared by every model
+and metric (full table: [`confidence_intervals.md`](confidence_intervals.md)).
+
+| Model | Accuracy @0.5 | ROC-AUC | Recall @0.5 | Recall @0.25 |
+|---|---|---|---|---|
+| ResNet50 | 94.35% [92.17, 96.30] | 0.9858 [0.9751, 0.9935] | 95.65% [92.69, 98.21] | 98.70% [97.00, 100.00] |
+| EfficientNet-B0 | 88.70% [85.87, 91.52] | 0.9620 [0.9469, 0.9761] | 88.70% [84.28, 92.51] | 95.65% [92.80, 97.96] |
+| HistGradientBoosting | 84.57% [81.30, 87.61] | 0.9240 [0.8999, 0.9457] | 81.74% [76.57, 86.70] | 94.35% [91.21, 97.14] |
+| Logistic regression | 82.17% [78.70, 85.43] | 0.9097 [0.8832, 0.9333] | 78.70% [73.54, 84.05] | 96.96% [94.56, 99.08] |
+
+Comparing two marginal intervals understates what the data can resolve,
+because both models are scored on the same images. The paired intervals
+for ResNet50 minus each model exclude zero on every metric:
+
+| Compared with | Δ Accuracy @0.5 (pts) | Δ ROC-AUC | Δ Recall @0.5 (pts) |
+|---|---|---|---|
+| EfficientNet-B0 | +5.65 [+3.04, +8.48] | +0.0238 [+0.0118, +0.0362] | +6.96 [+2.84, +11.16] |
+| HistGradientBoosting | +9.78 [+6.30, +13.26] | +0.0618 [+0.0418, +0.0843] | +13.91 [+8.37, +19.73] |
+| Logistic regression | +12.17 [+8.70, +15.87] | +0.0761 [+0.0547, +0.1007] | +16.96 [+11.54, +22.36] |
+
 ## Interpretation
 
 **What deep learning adds.** The classical features are far from
 useless: a ROC-AUC of 0.92 means color, texture and edge statistics
 already rank most damaged cars above most intact ones. ResNet50 still
-improves on the best baseline by 0.062 ROC-AUC and 9.8 accuracy points,
-and the difference is concentrated on the costly error type: at the
+improves on the best baseline by 0.062 ROC-AUC (paired 95% CI
++0.042 to +0.084) and 9.8 accuracy points (+6.3 to +13.3), and the difference is concentrated on the costly error type: at the
 default threshold it misses 10 damaged cars against 42 for
 HistGradientBoosting. The baselines can match ResNet50's recall only by
 lowering the threshold, which multiplies false alarms: logistic
@@ -82,9 +107,9 @@ global descriptors do not encode.
   scikit-image and scikit-learn; the ResNet50 checkpoint is ~94 MB and
   needs PyTorch at inference time.
 - *Monitoring and sanity checks.* A cheap, independent model is useful
-  for detecting drift or silent failures in the CNN, because the two
-  models make largely different errors (17 images only the baseline gets
-  right).
+  for detecting drift or silent failures in the CNN, because their errors
+  only partly overlap: the baseline is right on 17 of ResNet50's 26
+  errors at threshold 0.5.
 
 It is **not** a good first stage of a cascade: HistGradientBoosting is
 confident (P ≤ 0.1 or ≥ 0.9) on only 46.3% of images, at 96.24% accuracy
@@ -98,12 +123,17 @@ add errors on them.
   training and validation splits. The CNNs used the validation loss for
   early stopping and checkpoint selection; the baselines did not touch
   it. CNN numbers are therefore slightly optimistic relative to the
-  baselines. With a 0.062 ROC-AUC gap the conclusion is unlikely to
-  change, but an independent test set is needed to measure the exact
+  baselines. The paired ROC-AUC interval against the best baseline
+  (+0.042 to +0.084) leaves room for that bias without changing the
+  conclusion, but an independent test set is needed to measure the exact
   margin.
 - **Threshold 0.25 is not a matched operating point.** Each model's
   probabilities are calibrated differently, so recall @0.25 compares
   different precision levels. ROC-AUC and the false-positive counts
   above are the fairer comparisons.
-- **Single split, single seed.** Sampling uncertainty on 460 images is
-  not shown in these tables.
+- **Intervals cover evaluation sampling only.** The bootstrap resamples
+  the 460 validation images; it does not capture training variance
+  (different seeds or data orderings), which would widen the intervals.
+- **Percentile intervals near the boundary.** ResNet50 recall @0.25
+  misses only 3 of 230 damaged cars, so its upper bound reaches 100% and
+  the interval is less reliable than the others.

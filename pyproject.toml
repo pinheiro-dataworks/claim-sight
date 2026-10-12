@@ -17,10 +17,10 @@ ignore = [
 # --cov scope (passed explicitly in CI, not duplicated here) is
 # deliberately limited to modules with dedicated unit tests
 # (preprocessing, dataset, model, predictions, baseline, compare_models,
-# the FastAPI app) — src/train.py,
+# bootstrap, confidence_intervals, the FastAPI app) — src/train.py,
 # evaluate.py, explain.py, ingestion.py, and scripts/ are one-shot
 # orchestration scripts validated by actually running them during
 # development (their real outputs are committed under outputs/), not
 # unit-tested line by line.
-fail_under = 80
+fail_under = 85
 show_missing = true

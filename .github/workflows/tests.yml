@@ -32,8 +32,9 @@ jobs:
           pytest tests/ -v -m "not integration"
           --cov=src.preprocessing --cov=src.dataset --cov=src.model
           --cov=src.predictions --cov=src.baseline --cov=src.compare_models
+          --cov=src.bootstrap --cov=src.confidence_intervals
           --cov=app.main --cov=app.schemas
-          --cov-report=term-missing --cov-fail-under=80
+          --cov-report=term-missing --cov-fail-under=85
 
       # Separate, opt-in tier: downloads the real published checkpoint
       # from the Hugging Face Hub and verifies actual trained behavior
