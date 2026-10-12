@@ -1,0 +1,28 @@
+{
+  "seed": 42,
+  "feature_dim": 1879,
+  "feature_groups": {
+    "hsv_histogram": 96,
+    "hog": 1764,
+    "edge_stats": 19
+  },
+  "n_train": 1840,
+  "n_validation": 460,
+  "feature_extraction_seconds": 6.29,
+  "models": {
+    "logreg": {
+      "fit_seconds": 2.81,
+      "hyperparameters": {
+        "C": 0.001
+      },
+      "predictions": "reports/predictions/validation_logreg.csv"
+    },
+    "hist_gb": {
+      "fit_seconds": 16.16,
+      "hyperparameters": {
+        "n_iter": 173
+      },
+      "predictions": "reports/predictions/validation_hist_gb.csv"
+    }
+  }
+}
