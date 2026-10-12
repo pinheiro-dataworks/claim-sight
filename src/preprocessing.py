@@ -44,6 +44,18 @@ def preprocess(image_bgr: np.ndarray) -> np.ndarray:
     return image_rgb
 
 
+def letterbox_box(height: int, width: int, size: int = TARGET_SIZE) -> tuple[int, int, int, int]:
+    """Return (top, left, content_h, content_w) of the image inside the letterbox.
+
+    Exposed so downstream consumers (e.g. the classical baseline's
+    color and edge statistics) can exclude the constant padding without
+    re-deriving the resize arithmetic.
+    """
+    scale = size / max(height, width)
+    content_h, content_w = max(1, round(height * scale)), max(1, round(width * scale))
+    return (size - content_h) // 2, (size - content_w) // 2, content_h, content_w
+
+
 def _resize_with_padding(image: np.ndarray, size: int) -> np.ndarray:
     """Resize keeping aspect ratio, then letterbox-pad to a (size x size) square.
 
@@ -52,13 +64,10 @@ def _resize_with_padding(image: np.ndarray, size: int) -> np.ndarray:
     the exact visual signal the model is trained to detect.
     """
     h, w = image.shape[:2]
-    scale = size / max(h, w)
-    new_h, new_w = max(1, round(h * scale)), max(1, round(w * scale))
+    top, left, new_h, new_w = letterbox_box(h, w, size)
     resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-    top = (size - new_h) // 2
     bottom = size - new_h - top
-    left = (size - new_w) // 2
     right = size - new_w - left
     return cv2.copyMakeBorder(
         resized, top, bottom, left, right,
