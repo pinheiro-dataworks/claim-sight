@@ -8,7 +8,7 @@ or aspect ratio.
 import numpy as np
 import pytest
 
-from src.preprocessing import TARGET_SIZE, preprocess
+from src.preprocessing import TARGET_SIZE, letterbox_box, preprocess
 
 
 def _random_image(h: int, w: int, seed: int = 0) -> np.ndarray:
@@ -71,3 +71,14 @@ def test_preserves_aspect_ratio_no_stretch():
     # if the image had been stretched to fill the square, all 224 rows
     # would be bright. Assert padding clearly dominates.
     assert bright_rows.size < TARGET_SIZE * 0.8
+
+
+@pytest.mark.parametrize("h, w", [(100, 400), (400, 100), (224, 224), (1, 900)])
+def test_letterbox_box_matches_padding_layout(h, w):
+    top, left, content_h, content_w = letterbox_box(h, w)
+    assert max(content_h, content_w) == TARGET_SIZE
+    assert 0 <= top and top + content_h <= TARGET_SIZE
+    assert 0 <= left and left + content_w <= TARGET_SIZE
+    # A white source image must be non-black exactly inside the reported box.
+    out = preprocess(np.full((h, w, 3), 255, dtype=np.uint8))
+    assert out[top:top + content_h, left:left + content_w].min() > 200
