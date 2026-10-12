@@ -1,0 +1,68 @@
+name: Docker image
+
+# The unit suite runs on a full Ubuntu runner, which ships the X11/GL
+# libraries a slim image lacks, so it cannot catch image-only breakage
+# (e.g. a dependency pulling in the GUI OpenCV build). This job builds
+# the real image and serves real predictions from it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - requirements.txt
+      - src/**
+      - app/**
+      - samples/**
+      - .github/workflows/docker.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - requirements.txt
+      - src/**
+      - app/**
+      - samples/**
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t claimsight-api:ci .
+
+      - name: Start container (checkpoint downloaded from the Hugging Face Hub)
+        run: |
+          docker run -d --name claimsight -p 7860:7860 \
+            -e CLAIMSIGHT_HF_REPO=PinheiroDataworks/claimsight-damage-detection \
+            claimsight-api:ci
+          for i in $(seq 1 90); do
+            curl -sf http://localhost:7860/health && exit 0
+            [ "$(docker inspect -f '{{.State.Running}}' claimsight)" = "true" ] || break
+            sleep 2
+          done
+          docker logs claimsight
+          exit 1
+
+      # /health reports "ok" even without a model, so assert on real
+      # predictions from the trained checkpoint instead.
+      - name: Predict on bundled samples
+        run: |
+          check() {
+            body=$(curl -sf -F "file=@$1;type=image/jpeg" http://localhost:7860/predict)
+            echo "$1 -> $body"
+            echo "$body" | grep -q "\"prediction\":\"$2\""
+          }
+          check samples/damage_example.jpg 00-damage
+          check samples/whole_example.jpg 01-whole
+          curl -sf -F "file=@samples/damage_example.jpg;type=image/jpeg" \
+            http://localhost:7860/predict-with-gradcam | grep -q gradcam
+
+      - name: Container logs
+        if: always()
+        run: docker logs claimsight || true

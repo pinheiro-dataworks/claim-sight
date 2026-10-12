@@ -27,7 +27,16 @@ RUN apt-get update && \
 WORKDIR /code
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# grad-cam declares a dependency on the full (GUI) opencv-python build.
+# pip installs it next to opencv-python-headless and it overwrites the
+# shared cv2 module with binaries that need X11/GL libraries absent from
+# slim images (ImportError: libxcb.so.1 at startup). Remove it and
+# restore the headless build pinned in requirements.txt.
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y opencv-python && \
+    pip install --no-cache-dir --force-reinstall --no-deps \
+        "$(grep '^opencv-python-headless==' requirements.txt)" && \
+    python -c "import cv2; print('cv2', cv2.__version__)"
 
 COPY src ./src
 COPY app ./app

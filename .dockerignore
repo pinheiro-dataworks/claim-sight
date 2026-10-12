@@ -1,0 +1,23 @@
+# The image only needs requirements.txt, src/ and app/ (see Dockerfile).
+# Everything else would just inflate the build context: the local
+# virtualenv and dataset alone are several GB.
+.venv/
+venv/
+data/
+models/
+outputs/
+reports/
+notebooks/
+web/
+samples/
+tests/
+.git/
+.github/
+.claude/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+.env
+*.token
