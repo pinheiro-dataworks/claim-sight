@@ -478,7 +478,18 @@ streamlit run streamlit_app.py
 
 # Tested REST API — run anywhere, including locally:
 uvicorn app.main:app --reload
+
+# Same API as a container (checkpoint pulled from the Hub at startup):
+docker build -t claimsight-api .
+docker run -p 7860:7860 \
+  -e CLAIMSIGHT_HF_REPO=PinheiroDataworks/claimsight-damage-detection \
+  claimsight-api
+# → http://localhost:7860/  (demo)  ·  http://localhost:7860/docs
 ```
+
+The image is smoke-tested in CI (`.github/workflows/docker.yml`): it is
+built, started, and must serve correct predictions on both bundled
+sample images.
 
 ## Business model
 
@@ -521,7 +532,7 @@ damage at all — time an adjuster never needs to spend.
 | CI rigor: unit/integration split, coverage gate, linting | `tests/test_integration.py`, `pyproject.toml` (`fail_under = 85`), `.github/workflows/tests.yml` (`ruff check`) |
 | Reproducibility & pipeline engineering | pinned `requirements.txt`, fixed seeds, per-run metadata JSON |
 | MLOps / model publication | `scripts/publish_hf.py` + generated [`MODEL_CARD.md`](MODEL_CARD.md) |
-| Containerized deployment | `Dockerfile` |
+| Containerized deployment, smoke-tested in CI | `Dockerfile`, `.github/workflows/docker.yml` |
 | Free-tier live deployment | GitHub Pages, Hugging Face Hub, Streamlit Community Cloud |
 | Cross-platform dependency debugging (Python ABI, CUDA wheel bloat, Debian package transitions) | `requirements.txt`, `packages.txt`, `.python-version` |
 
